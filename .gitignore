@@ -16,3 +16,10 @@ build/
 
 # 로그
 *.log
+
+# Next.js·테스트
+next-env.d.ts
+*.tsbuildinfo
+coverage/
+supabase/.temp/
+supabase/.branches/
