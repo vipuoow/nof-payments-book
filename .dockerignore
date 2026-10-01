@@ -1,0 +1,10 @@
+.git
+node_modules
+.next
+coverage
+.env*
+supabase/.temp
+supabase/.branches
+tests
+docs
+.superpowers

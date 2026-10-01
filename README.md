@@ -24,3 +24,21 @@ pnpm test:db
 
 비밀값은 `.env.local`에만 두고, 키 이름은 `.env.example`을 참고한다.
 이 프로젝트는 `.npmrc`로 공개 npm 저장소(registry.npmjs.org)를 사용한다.
+
+## 결제 문자 수신 API
+
+```http
+POST /api/ingest
+Authorization: Bearer <기기 토큰>
+Content-Type: application/json
+
+{ "body": "<문자 원문>", "receivedAt": "<ISO 8601, 생략 시 서버 시각>", "source": "ios_shortcut" | "android_macrodroid" | "manual_test" }
+```
+
+| 응답 | 의미 |
+|---|---|
+| `200 {"status":"parsed","transactionId":...}` | 거래 저장 |
+| `200 {"status":"ignored"}` | 결제가 아닌 안내 문자(후불교통 등) |
+| `200 {"status":"unparsed"}` | 해석하지 못해 원문만 저장 |
+| `200 {"status":"duplicate"}` | 이미 받은 문자 |
+| `400` / `401` / `429` | 형식 오류 / 토큰 오류 / 분당 30회 초과 |
