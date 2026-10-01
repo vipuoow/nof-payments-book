@@ -27,14 +27,16 @@ async function must<T>(p: PromiseLike<{ data: T; error: unknown }>): Promise<T> 
 export async function createLoneUser(label: string): Promise<TestUser> {
   const admin = adminClient();
   const email = `${label}-${randomUUID()}@test.local`;
-  const created = await must(
-    admin.auth.admin.createUser({ email, password: PASSWORD, email_confirm: true }),
-  );
-  const userId = created.user!.id;
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email, password: PASSWORD, email_confirm: true,
+  });
+  if (createError) throw createError;
+  const userId = created.user.id;
   await must(admin.from("profiles").insert({ user_id: userId, display_name: label }));
 
   const client = anonClient();
-  await must(client.auth.signInWithPassword({ email, password: PASSWORD }));
+  const { error: signInError } = await client.auth.signInWithPassword({ email, password: PASSWORD });
+  if (signInError) throw signInError;
   return { userId, client };
 }
 
@@ -45,6 +47,7 @@ export async function createGroupFixture(label: string): Promise<GroupFixture> {
   const group = await must(
     admin.from("groups").insert({ name: `${label} 가계부`, owner_id: owner.userId }).select("id").single(),
   );
+  if (!group) throw new Error("group insert returned no row");
   await must(
     admin.from("group_members").insert([
       { group_id: group.id, user_id: owner.userId, role: "owner" },
