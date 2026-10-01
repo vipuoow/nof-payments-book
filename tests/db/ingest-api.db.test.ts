@@ -5,17 +5,19 @@ import { createRateLimiter } from "@/ingest/rate-limit";
 import { adminClient, createGroupFixture, issueIngestToken, type GroupFixture } from "../helpers/db";
 
 const SERVER_NOW = new Date("2026-09-23T09:00:00+09:00");
-const deps = (limit = 30): IngestDeps => ({
+const deps = (tokenLimit = 30, ipLimit = 1000): IngestDeps => ({
   db: adminClient(),
-  limiter: createRateLimiter({ limit, windowMs: 60_000 }),
+  tokenLimiter: createRateLimiter({ limit: tokenLimit, windowMs: 60_000 }),
+  ipLimiter: createRateLimiter({ limit: ipLimit, windowMs: 60_000 }),
   now: () => SERVER_NOW,
 });
 
-function post(body: unknown, token?: string): Request {
+function post(body: unknown, token?: string, ip = "203.0.113.1"): Request {
   return new Request("http://localhost/api/ingest", {
     method: "POST",
     headers: {
       "content-type": "application/json",
+      "cf-connecting-ip": ip,
       ...(token ? { authorization: `Bearer ${token}` } : {}),
     },
     body: typeof body === "string" ? body : JSON.stringify(body),
@@ -62,6 +64,16 @@ describe("POST /api/ingest", () => {
     expect(
       (await handleIngest(post({ body: APPROVAL, source: "ios_shortcut", receivedAt: "어제" }, token), deps())).status,
     ).toBe(400);
+  });
+
+  it("가짜 토큰을 반복하는 IP는 토큰 확인 전에 429", async () => {
+    const d = deps(30, 2);
+    const fake = () => post({ body: APPROVAL, source: "ios_shortcut" }, `fake-${Math.random()}`, "198.51.100.7");
+    expect((await handleIngest(fake(), d)).status).toBe(401);
+    expect((await handleIngest(fake(), d)).status).toBe(401);
+    expect((await handleIngest(fake(), d)).status).toBe(429);
+    // 다른 IP의 정상 요청에는 영향이 없다
+    expect((await handleIngest(post({ body: `${APPROVAL}\n#ip`, source: "manual_test" }, token), d)).status).toBe(200);
   });
 
   it("토큰당 제한을 넘으면 429", async () => {

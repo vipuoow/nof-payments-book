@@ -5,8 +5,9 @@ import { createAdminClient } from "@/lib/supabase-admin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const limiter = createRateLimiter({ limit: 30, windowMs: 60_000 });
+const tokenLimiter = createRateLimiter({ limit: 30, windowMs: 60_000 });
+const ipLimiter = createRateLimiter({ limit: 120, windowMs: 60_000 });
 
 export async function POST(req: Request): Promise<Response> {
-  return handleIngest(req, { db: createAdminClient(), limiter, now: () => new Date() });
+  return handleIngest(req, { db: createAdminClient(), tokenLimiter, ipLimiter, now: () => new Date() });
 }

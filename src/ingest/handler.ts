@@ -10,17 +10,35 @@ const RequestBody = z.object({
   source: z.enum(["ios_shortcut", "android_macrodroid", "manual_test"]),
 });
 
-export type IngestDeps = { db: SupabaseClient; limiter: RateLimiter; now: () => Date };
+export type IngestDeps = {
+  db: SupabaseClient;
+  /** 인증된 사용자별 제한 (스펙: 토큰당 분당 30회) */
+  tokenLimiter: RateLimiter;
+  /** 토큰 확인(DB 조회) 전에 거는 IP별 제한 */
+  ipLimiter: RateLimiter;
+  now: () => Date;
+};
 
 const json = (status: number, payload: unknown) => Response.json(payload, { status });
 
+/** Cloudflare Tunnel 뒤에서는 cf-connecting-ip, 그 밖의 프록시는 x-forwarded-for 첫 값 */
+function clientIp(req: Request): string {
+  return (
+    req.headers.get("cf-connecting-ip") ??
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    "unknown"
+  );
+}
+
 export async function handleIngest(req: Request, deps: IngestDeps): Promise<Response> {
+  if (!deps.ipLimiter(clientIp(req))) return json(429, { error: "rate_limited" });
+
   const token = /^Bearer\s+(\S+)$/.exec(req.headers.get("authorization") ?? "")?.[1];
   if (!token) return json(401, { error: "unauthorized" });
-  if (!deps.limiter(token)) return json(429, { error: "rate_limited" });
 
   const owner = await resolveIngestToken(deps.db, token, deps.now());
   if (!owner) return json(401, { error: "unauthorized" });
+  if (!deps.tokenLimiter(owner.userId)) return json(429, { error: "rate_limited" });
 
   let payload: unknown;
   try {
