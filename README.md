@@ -25,6 +25,15 @@ pnpm test:db
 비밀값은 `.env.local`에만 두고, 키 이름은 `.env.example`을 참고한다.
 이 프로젝트는 `.npmrc`로 공개 npm 저장소(registry.npmjs.org)를 사용한다.
 
+## 운영자 지정
+
+초대 없이 가입할 수 있는 사람은 운영자뿐이다. 서버 전용 키로 직접 지정한다. 이메일은 운영자가 로그인할 **Google 계정 이메일**이어야 한다(같은 이메일의 Google 로그인과 자동으로 연결된다).
+
+```bash
+pnpm operator:grant <이메일> [이름]                                            # 로컬 DB (.env.local)
+node --env-file=.env.cloud scripts/grant-operator.ts <이메일> [이름]           # 클라우드 DB
+```
+
 ## 결제 문자 수신 API
 
 ```http
