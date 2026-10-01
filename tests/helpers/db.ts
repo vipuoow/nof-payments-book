@@ -64,3 +64,21 @@ export async function issueIngestToken(userId: string): Promise<string> {
   );
   return token;
 }
+
+/** 프로필 없이 로그인만 된 사용자(초대 수락 전 상태) */
+export async function createAuthOnlyUser(label: string): Promise<TestUser & { email: string }> {
+  const admin = adminClient();
+  const email = `${label}-${randomUUID()}@test.local`;
+  const { data, error } = await admin.auth.admin.createUser({ email, password: PASSWORD, email_confirm: true });
+  if (error) throw error;
+  const client = anonClient();
+  const { error: signInError } = await client.auth.signInWithPassword({ email, password: PASSWORD });
+  if (signInError) throw signInError;
+  return { userId: data.user.id, client, email };
+}
+
+export async function makeOperator(userId: string): Promise<void> {
+  await must(
+    adminClient().from("profiles").update({ is_operator: true, can_create_group: true }).eq("user_id", userId),
+  );
+}
