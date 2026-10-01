@@ -4,14 +4,14 @@ import { callRpc, type Result } from "./result";
 
 export type InviteKind = "service" | "group";
 export type InviteStatus =
-  | { status: "valid"; kind: InviteKind; groupName: string | null }
+  | { status: "valid"; kind: InviteKind; inviterName: string | null }
   | { status: "invalid" | "used" | "expired" | "revoked" | "service_full" | "group_full" };
 
 export async function getInviteStatus(admin: SupabaseClient, token: string): Promise<InviteStatus> {
   const { data, error } = await admin.rpc("invite_status", { p_token_hash: sha256Hex(token) });
   if (error) throw error;
-  const row = data as { status: InviteStatus["status"]; kind?: InviteKind; group_name?: string | null };
-  if (row.status === "valid") return { status: "valid", kind: row.kind!, groupName: row.group_name ?? null };
+  const row = data as { status: InviteStatus["status"]; kind?: InviteKind; inviter_name?: string | null };
+  if (row.status === "valid") return { status: "valid", kind: row.kind!, inviterName: row.inviter_name ?? null };
   return { status: row.status };
 }
 

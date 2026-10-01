@@ -45,7 +45,7 @@ export async function createGroupFixture(label: string): Promise<GroupFixture> {
   const owner = await createLoneUser(`${label}-owner`);
   const member = await createLoneUser(`${label}-member`);
   const group = await must(
-    admin.from("groups").insert({ name: `${label} 가계부`, owner_id: owner.userId }).select("id").single(),
+    admin.from("groups").insert({ owner_id: owner.userId }).select("id").single(),
   );
   if (!group) throw new Error("group insert returned no row");
   await must(

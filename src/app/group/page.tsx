@@ -21,7 +21,7 @@ export default async function GroupPage() {
   return (
     <main className="mx-auto max-w-sm p-6">
       <Link href="/" className="text-sm underline">← 홈</Link>
-      <h1 className="my-4 text-xl font-bold">{me.groupName}</h1>
+      <h1 className="my-4 text-xl font-bold">우리 가계부</h1>
       <h2 className="mb-2 font-semibold">구성원</h2>
       <ul className="mb-6 list-disc pl-5">
         {(members ?? []).map((m) => (

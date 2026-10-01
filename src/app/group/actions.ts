@@ -7,9 +7,9 @@ import { errorMessage } from "@/auth/messages";
 import type { SecretState } from "@/components/one-time-secret-form";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
-export async function createGroupAction(formData: FormData) {
+export async function createGroupAction() {
   const supabase = await createSupabaseServerClient();
-  const result = await createGroup(supabase, String(formData.get("name") ?? ""));
+  const result = await createGroup(supabase);
   if (!result.ok) redirect(`/group/new?error=${result.reason}`);
   redirect("/group");
 }

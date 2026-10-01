@@ -30,7 +30,10 @@ export default async function InvitePage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const title = status.kind === "group" ? `"${status.groupName}" 가계부에 초대받았습니다` : "가계부 서비스에 초대받았습니다";
+  const title =
+    status.kind === "group"
+      ? `${status.inviterName ?? "가족"}님이 가계부에 초대했습니다`
+      : "가계부 서비스에 초대받았습니다";
   const here = `/invite/${encodeURIComponent(token)}`;
 
   return (

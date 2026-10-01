@@ -14,7 +14,7 @@ export default async function OperatorPage() {
   const [{ count: users }, { data: maxUsers }, { data: groups }] = await Promise.all([
     admin.from("profiles").select("*", { count: "exact", head: true }),
     admin.from("app_settings").select("value").eq("key", "max_users").single(),
-    admin.from("groups").select("id, name, created_at, group_members(count)").order("created_at"),
+    admin.from("groups").select("id, created_at, profiles(display_name), group_members(count)").order("created_at"),
   ]);
 
   return (
@@ -27,7 +27,7 @@ export default async function OperatorPage() {
       <ul className="list-disc pl-5 text-sm">
         {(groups ?? []).map((g) => (
           <li key={g.id}>
-            {g.name} ({(g.group_members as unknown as { count: number }[])[0]?.count ?? 0}명)
+            {(g.profiles as unknown as { display_name: string } | null)?.display_name ?? "?"}님 그룹 ({(g.group_members as unknown as { count: number }[])[0]?.count ?? 0}명)
           </li>
         ))}
       </ul>

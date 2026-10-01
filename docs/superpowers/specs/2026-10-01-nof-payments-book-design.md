@@ -35,7 +35,7 @@
 | 역할 | 할 수 있는 일 |
 |---|---|
 | 운영자 | 서비스 초대 링크 발급, 사용자·그룹 현황 조회, 그룹 구성원 조정 |
-| 그룹장 | 그룹 생성, 그룹 초대 링크 발급·취소, 그룹 이름 변경 |
+| 그룹장 | 그룹 생성, 그룹 초대 링크 발급·취소 |
 | 그룹원 | 그룹 가계부 조회·관리, 예산·카테고리 수정, 본인 기기 연결 |
 
 **제한 (`app_settings`의 설정값, 하드코딩 금지)**
@@ -84,7 +84,7 @@
 |---|---|---|
 | `profiles` | `user_id`, `display_name`, `is_operator`, `can_create_group` | `auth.users`와 1:1 |
 | `service_invites` | `token_hash`, `created_by`, `expires_at`, `used_by`, `used_at` | 운영자만 발급 |
-| `groups` | `id`, `name`, `owner_id`, `created_at` | |
+| `groups` | `id`, `owner_id`, `created_at` | 이름 없음. 화면에는 역할(그룹장·그룹원)과 초대한 사람 이름만 표시 |
 | `group_members` | `group_id`, `user_id`, `role`(owner/member) | `user_id` unique (한 사람 한 그룹) |
 | `group_invites` | `group_id`, `token_hash`, `created_by`, `expires_at`, `used_by`, `revoked_at` | 그룹장만 발급 |
 | `ingest_tokens` | `user_id`, `token_hash`, `label`, `last_used_at`, `revoked_at` | 원문 토큰은 발급 시 한 번만 표시 |
@@ -176,7 +176,7 @@ type ParseResult =
 | 내 기기 연결 | 그룹원 | 기기 선택 → 설정 안내 → 토큰(발급 시 한 번만 표시), 재발급·폐기, 마지막 수신 시각(3일 넘으면 경고) |
 | 카테고리 | 그룹원 | 그룹 카테고리 추가·수정, 가맹점 규칙 관리 |
 | 예산 | 그룹원 | 월 전체·카테고리별 예산 설정 |
-| 그룹 | 그룹장 | 그룹 이름, 초대 링크 발급·취소, 구성원 |
+| 그룹 | 그룹장 | 초대 링크 발급·취소, 구성원 |
 | 운영자 | 운영자 | 서비스 초대 발급, 사용자 수 / 최대 인원, 그룹 목록 |
 | 가입·로그인 | 모두 | Google 로그인, 초대 링크에서는 이름 확인 후 수락 |
 

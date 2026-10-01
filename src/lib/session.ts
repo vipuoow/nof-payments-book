@@ -9,7 +9,6 @@ export type Me = {
   isOperator: boolean;
   canCreateGroup: boolean;
   groupId: string | null;
-  groupName: string | null;
   role: "owner" | "member" | null;
 };
 
@@ -30,10 +29,9 @@ export async function loadMe(): Promise<{ supabase: SupabaseClient; me: Me }> {
 
   const { data: member } = await supabase
     .from("group_members")
-    .select("group_id, role, groups(name)")
+    .select("group_id, role")
     .eq("user_id", user.id)
     .maybeSingle();
-  const group = member?.groups as { name: string } | null | undefined;
 
   return {
     supabase,
@@ -43,7 +41,6 @@ export async function loadMe(): Promise<{ supabase: SupabaseClient; me: Me }> {
       isOperator: profile.is_operator,
       canCreateGroup: profile.can_create_group,
       groupId: member?.group_id ?? null,
-      groupName: group?.name ?? null,
       role: (member?.role as Me["role"]) ?? null,
     },
   };

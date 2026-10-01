@@ -2,8 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { callRpc, type Result } from "./result";
 import { newSecret } from "./tokens";
 
-export async function createGroup(db: SupabaseClient, name: string): Promise<Result<string>> {
-  return callRpc(db.rpc("create_group", { p_name: name }), (d) => d as string);
+export async function createGroup(db: SupabaseClient): Promise<Result<string>> {
+  return callRpc(db.rpc("create_group"), (d) => d as string);
 }
 
 export async function createGroupInvite(db: SupabaseClient): Promise<Result<{ token: string; expiresAt: string }>> {

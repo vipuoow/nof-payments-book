@@ -8,7 +8,7 @@ export default async function Home() {
     <main className="mx-auto max-w-sm p-6">
       <h1 className="mb-1 text-xl font-bold">{me.displayName}님</h1>
       <p className="mb-6 text-gray-600">
-        {me.groupName ? `${me.groupName} (${me.role === "owner" ? "그룹장" : "그룹원"})` : "아직 그룹이 없습니다"}
+        {me.groupId ? (me.role === "owner" ? "그룹장" : "그룹원") : "아직 그룹이 없습니다"}
       </p>
       <nav className="flex flex-col gap-2">
         {!me.groupId && me.canCreateGroup && <Link className="underline" href="/group/new">그룹 만들기</Link>}
