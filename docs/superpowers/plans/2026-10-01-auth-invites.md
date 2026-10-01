@@ -16,7 +16,7 @@
 - 검증: 매 Task 끝에 `pnpm test`, `pnpm test:db`, `npx tsc --noEmit`, `pnpm lint`, `pnpm build`, `pnpm secrets:scan`을 모두 실행한다(계획 1 Task 3에서 빌드 검증 누락 사례).
 - 공개 저장소: 실제 문자·이메일·사이트 주소·비밀값을 커밋하지 않는다. 비밀값은 `.env*`에만 둔다.
 - 로그인: **Google 로그인만** 쓴다(비밀번호·이메일 로그인 없음). 초대 링크만 있으면 어느 Google 계정으로든 가입할 수 있다(1회용·7일 만료).
-- Google 첫 로그인이 Supabase 인증 계정을 만들 수 있도록 Auth 가입은 켜 두되(`[auth] enable_signup = true`), 이메일 가입은 끈다(`[auth.email] enable_signup = false`). 앱 사용 권한은 **프로필**로 판단한다: 프로필은 초대 수락(`accept_invite`)이나 운영자 스크립트로만 생긴다. 프로필 없이 로그인하면 즉시 로그아웃시킨다.
+- Google 첫 로그인이 Supabase 인증 계정을 만들 수 있도록 Auth 가입은 켜 둔다(`[auth] enable_signup = true`). 로컬에서는 `[auth.email] enable_signup`도 켜 둔다(끄면 이메일 로그인 자체가 꺼져 테스트 헬퍼의 비밀번호 로그인이 막힘). 앱에는 이메일 로그인 화면이 없고, 클라우드의 이메일 공급자는 계획 4에서 끈다. 앱 사용 권한은 **프로필**로 판단한다: 프로필은 초대 수락(`accept_invite`)이나 운영자 스크립트로만 생긴다. 프로필 없이 로그인하면 즉시 로그아웃시킨다.
 - OAuth 이후 이동 경로(`next`)는 같은 사이트의 경로만 허용한다(오픈 리다이렉트 방지).
 - Google OAuth 클라이언트 ID·비밀값은 `supabase/.env`(git 제외)에만 둔다.
 - 인원 제한은 `app_settings`의 `max_users`(30), `max_group_members`(2), 초대 유효기간은 `invite_ttl_days`(7)를 읽는다. 하드코딩 금지.
@@ -133,8 +133,9 @@ additional_redirect_urls = ["http://127.0.0.1:3100/**"]
 enable_signup = true
 
 [auth.email]
-# 이메일·비밀번호 가입과 로그인은 쓰지 않는다
-enable_signup = false
+# 로컬에서는 켜 둔다: 끄면 이메일 로그인 자체가 꺼져 자동 테스트의 비밀번호 로그인이 막힌다.
+# 클라우드에서는 계획 4에서 끈다.
+enable_signup = true
 ```
 
 `[auth.external.apple]` 블록 아래에 추가:

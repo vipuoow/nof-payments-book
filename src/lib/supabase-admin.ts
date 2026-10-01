@@ -1,3 +1,4 @@
+import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 /** service_role 클라이언트. 서버 코드(라우트·서버 액션)에서만 import한다. */
