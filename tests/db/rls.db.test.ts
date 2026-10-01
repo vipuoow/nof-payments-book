@@ -60,6 +60,19 @@ describe("그룹 격리 RLS", () => {
     expect(error).not.toBeNull();
   });
 
+  it("거래의 사용자를 다른 그룹 사람으로 바꿀 수 없다", async () => {
+    const admin = adminClient();
+    const { data: own, error } = await admin.from("transactions").insert({
+      group_id: a.groupId, user_id: a.owner.userId, kind: "manual", amount: 500,
+      merchant: "A가게", occurred_at: new Date().toISOString(),
+    }).select("id").single();
+    if (error) throw error;
+    const res = await a.owner.client.from("transactions").update({ user_id: b.owner.userId }).eq("id", own.id);
+    expect(res.error).not.toBeNull();
+    const { data: after } = await admin.from("transactions").select("user_id").eq("id", own.id).single();
+    expect(after!.user_id).toBe(a.owner.userId);
+  });
+
   it("기본 카테고리와 자기 그룹 카테고리만 보인다", async () => {
     const { data } = await a.owner.client.from("categories").select("id, group_id");
     expect(data!.some((c) => c.id === bCategoryId)).toBe(false);
