@@ -98,6 +98,36 @@ describe("그룹 격리 RLS", () => {
     expect(data).toEqual([]);
   });
 
+  it("수동 입력·규칙·예산에 다른 그룹 카테고리를 붙일 수 없다", async () => {
+    const tx = await a.owner.client.from("transactions").insert({
+      group_id: a.groupId, user_id: a.owner.userId, kind: "manual", amount: 1,
+      merchant: "남의카테고리", occurred_at: new Date().toISOString(), category_id: bCategoryId,
+    });
+    expect(tx.error).not.toBeNull();
+    const rule = await a.owner.client.from("merchant_rules").insert({
+      group_id: a.groupId, merchant_pattern: "x", category_id: bCategoryId,
+    });
+    expect(rule.error).not.toBeNull();
+    const budget = await a.owner.client.from("budgets").insert({
+      group_id: a.groupId, category_id: bCategoryId, month: "2026-10-01", amount: 1000,
+    });
+    expect(budget.error).not.toBeNull();
+  });
+
+  it("수동 입력에 취소 연결 칸을 직접 넣어 승인 거래를 가로챌 수 없다", async () => {
+    const { data: approval, error: seedError } = await adminClient().from("transactions").insert({
+      group_id: a.groupId, user_id: a.owner.userId, kind: "approval", amount: 5000,
+      merchant: "진짜승인", occurred_at: new Date().toISOString(),
+    }).select("id").single();
+    if (seedError) throw seedError;
+    const { error } = await a.owner.client.from("transactions").insert({
+      group_id: a.groupId, user_id: a.owner.userId, kind: "manual", amount: -5000,
+      merchant: "연결위조", occurred_at: new Date().toISOString(),
+      cancels_transaction_id: approval.id,
+    });
+    expect(error).not.toBeNull();
+  });
+
   it("로그인하지 않으면 아무것도 볼 수 없다", async () => {
     const { data } = await anonClient().from("transactions").select("id");
     expect(data ?? []).toEqual([]);

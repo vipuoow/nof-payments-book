@@ -1,4 +1,4 @@
-import { inferYear, kstDate } from "./kst";
+import { inferYear, isValidKstDateTime, kstDate } from "./kst";
 import { smsLines as lines } from "./lines";
 import type { CardSmsParser, ParseResult } from "./types";
 
@@ -31,11 +31,13 @@ export const kbCardParser: CardSmsParser = {
     }
 
     const [month, day, hour, minute] = datetime.slice(1).map(Number);
+    const year = inferYear(month, receivedAt);
+    if (!isValidKstDateTime(year, month, day, hour, minute)) return { kind: "unknown" };
     return {
       kind: header[1] === "승인" ? "approval" : "cancel",
       amount: Number(amount[1].replaceAll(",", "")),
       merchant,
-      occurredAt: kstDate(inferYear(month, receivedAt), month, day, hour, minute),
+      occurredAt: kstDate(year, month, day, hour, minute),
       issuer: "kb",
     };
   },

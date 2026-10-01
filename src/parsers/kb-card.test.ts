@@ -59,4 +59,9 @@ describe("kbCardParser.parse", () => {
     const r = kbCardParser.parse(dec, new Date("2027-01-01T00:05:00+09:00"));
     expect(r).toMatchObject({ occurredAt: new Date("2026-12-31T14:50:00.000Z") });
   });
+
+  it("있을 수 없는 날짜·시각은 unknown", () => {
+    expect(kbCardParser.parse(APPROVAL.replace("09/23 08:26", "13/45 99:99"), received)).toEqual({ kind: "unknown" });
+    expect(kbCardParser.parse(APPROVAL.replace("09/23 08:26", "02/30 10:00"), received)).toEqual({ kind: "unknown" });
+  });
 });

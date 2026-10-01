@@ -16,3 +16,10 @@ export function inferYear(messageMonth: number, receivedAt: Date): number {
   const { year, month } = kstYearMonth(receivedAt);
   return messageMonth > month ? year - 1 : year;
 }
+
+/** 실제로 있는 날짜·시각인지 (2월 30일, 13월, 24시 등은 거짓) */
+export function isValidKstDateTime(year: number, month: number, day: number, hour: number, minute: number): boolean {
+  if (hour > 23 || minute > 59) return false;
+  const k = new Date(kstDate(year, month, day, hour, minute).getTime() + KST_OFFSET_MS);
+  return k.getUTCMonth() + 1 === month && k.getUTCDate() === day;
+}
