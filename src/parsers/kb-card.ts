@@ -1,4 +1,5 @@
 import { inferYear, kstDate } from "./kst";
+import { smsLines as lines } from "./lines";
 import type { CardSmsParser, ParseResult } from "./types";
 
 // 승인·취소 문자 줄 구성:
@@ -6,13 +7,6 @@ import type { CardSmsParser, ParseResult } from "./types";
 const HEADER = /^KB국민카드\d{4}(승인|취소)$/;
 const AMOUNT = /^([\d,]+)원\s+(?:일시불|\d+개월)$/;
 const DATETIME = /^(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/;
-
-function lines(body: string): string[] {
-  return body
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l !== "" && l !== "[Web발신]");
-}
 
 export const kbCardParser: CardSmsParser = {
   id: "kb-card",

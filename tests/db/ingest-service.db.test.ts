@@ -87,6 +87,50 @@ describe("ingestMessage", () => {
     expect(first.amount + cancel.amount + second.amount).toBe(12300);
   });
 
+  it("같은 분 안에 승인 → 취소 → 재승인(문자 동일)이어도 재승인은 새 거래", async () => {
+    const g = await createGroupFixture("sameminute");
+    const owner = { userId: g.owner.userId, groupId: g.groupId };
+    const approval = at(APPROVAL, "09/23 08:26");
+    const cancel = at(CANCEL, "09/23 08:26");
+    expect((await ingestMessage(db, owner, { body: approval, receivedAt: received, source })).status).toBe("parsed");
+    expect((await ingestMessage(db, owner, { body: cancel, receivedAt: received, source })).status).toBe("parsed");
+    expect((await ingestMessage(db, owner, { body: approval, receivedAt: received, source })).status).toBe("parsed");
+    // 재승인 문자가 한 번 더 오면(자동화 중복 실행) 그때는 중복
+    expect(await ingestMessage(db, owner, { body: approval, receivedAt: received, source })).toEqual({ status: "duplicate" });
+
+    const txs = await txOf(g.groupId);
+    expect(txs).toHaveLength(3);
+    expect(txs.reduce((sum, t) => sum + t.amount, 0)).toBe(12300);
+  });
+
+  it("[Web발신] 없음·CRLF·공백만 다른 같은 문자는 중복", async () => {
+    const g = await createGroupFixture("normdup");
+    const owner = { userId: g.owner.userId, groupId: g.groupId };
+    await ingestMessage(db, owner, { body: APPROVAL, receivedAt: received, source });
+    const altered = APPROVAL.replace("[Web발신]\n", "").replace(/\n/g, "  \r\n");
+    expect(await ingestMessage(db, owner, { body: altered, receivedAt: received, source })).toEqual({ status: "duplicate" });
+    expect(await txOf(g.groupId)).toHaveLength(1);
+  });
+
+  it("거래 저장이 실패하면 원문도 남지 않아 재전송 시 정상 처리된다", async () => {
+    const g = await createGroupFixture("atomic");
+    const args = {
+      p_group: g.groupId, p_user: g.owner.userId, p_body: "원문", p_body_hash: `atomic-${g.groupId}`,
+      p_source: source, p_received_at: received.toISOString(), p_status: "parsed", p_parser_id: "kb-card",
+      p_kind: "approval", p_amount: 1000, p_occurred_at: received.toISOString(), p_issuer: "kb",
+    };
+    // 가맹점 누락으로 거래 insert가 실패하도록 만든다
+    const failed = await db.rpc("ingest_sms", { ...args, p_merchant: null });
+    expect(failed.error).not.toBeNull();
+    const { data: raws } = await db.from("raw_messages").select("id").eq("group_id", g.groupId);
+    expect(raws).toEqual([]);
+
+    const retried = await db.rpc("ingest_sms", { ...args, p_merchant: "재전송상점" });
+    expect(retried.error).toBeNull();
+    expect(retried.data).toMatchObject({ status: "parsed" });
+    expect(await txOf(g.groupId)).toHaveLength(1);
+  });
+
   it("다른 사람의 승인에는 취소가 연결되지 않는다", async () => {
     const g = await createGroupFixture("cross");
     await ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId }, { body: APPROVAL, receivedAt: received, source });

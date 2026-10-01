@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sha256Hex } from "@/lib/hash";
-import { parseSms, type ParseResult } from "@/parsers";
+import { parseSms } from "@/parsers";
+import { smsLines } from "@/parsers/lines";
 import type { TokenOwner } from "./auth";
 import { maskBody } from "./mask";
 
@@ -8,100 +9,41 @@ export type IngestSource = "ios_shortcut" | "android_macrodroid" | "manual_test"
 export type IngestStatus = "parsed" | "unparsed" | "ignored" | "duplicate";
 export type IngestResult = { status: IngestStatus; transactionId?: string };
 
-type Payment = Extract<ParseResult, { kind: "approval" | "cancel" }>;
+/** 중복 판정용 해시: 형식 차이를 없애고 카드번호를 가린 뒤 해시한다. */
+export function dedupeHash(body: string): string {
+  return sha256Hex(maskBody(smsLines(body).join("\n")));
+}
 
-const UNIQUE_VIOLATION = "23505";
-
+/**
+ * 문자를 분석하고, 원문 저장·중복 판정·취소 연결·거래 생성은 DB 함수(ingest_sms)에서
+ * 한 트랜잭션으로 처리한다.
+ */
 export async function ingestMessage(
   db: SupabaseClient,
   owner: TokenOwner,
   input: { body: string; receivedAt: Date; source: IngestSource },
 ): Promise<IngestResult> {
   const { parserId, result } = parseSms(input.body, input.receivedAt);
-  const status =
-    result.kind === "approval" || result.kind === "cancel" ? "parsed"
-    : result.kind === "ignore" ? "ignored"
-    : "unparsed";
+  const payment = result.kind === "approval" || result.kind === "cancel" ? result : null;
+  const status = payment ? "parsed" : result.kind === "ignore" ? "ignored" : "unparsed";
 
-  const { data: raw, error } = await db
-    .from("raw_messages")
-    .insert({
-      group_id: owner.groupId,
-      user_id: owner.userId,
-      body: maskBody(input.body),
-      body_hash: sha256Hex(input.body),
-      source: input.source,
-      received_at: input.receivedAt.toISOString(),
-      status,
-      parser_id: parserId,
-    })
-    .select("id")
-    .single();
-  if (error) {
-    if (error.code === UNIQUE_VIOLATION) return { status: "duplicate" };
-    throw error;
-  }
-
-  if (result.kind !== "approval" && result.kind !== "cancel") return { status };
-
-  try {
-    const transactionId = await createTransaction(db, owner, raw.id, result);
-    return { status, transactionId };
-  } catch (e) {
-    // 거래 저장에 실패하면 미분류로 돌려 화면에서 다시 처리할 수 있게 한다.
-    await db.from("raw_messages").update({ status: "unparsed" }).eq("id", raw.id);
-    throw e;
-  }
-}
-
-async function createTransaction(
-  db: SupabaseClient,
-  owner: TokenOwner,
-  rawMessageId: string,
-  payment: Payment,
-): Promise<string> {
-  const categoryId = await findCategory(db, owner.groupId, payment.merchant);
-  const cancelsId = payment.kind === "cancel" ? await findCancelTarget(db, owner, payment) : null;
-
-  const { data, error } = await db
-    .from("transactions")
-    .insert({
-      group_id: owner.groupId,
-      user_id: owner.userId,
-      raw_message_id: rawMessageId,
-      kind: payment.kind,
-      amount: payment.kind === "cancel" ? -payment.amount : payment.amount,
-      merchant: payment.merchant,
-      occurred_at: payment.occurredAt.toISOString(),
-      issuer: payment.issuer,
-      category_id: categoryId,
-      cancels_transaction_id: cancelsId,
-    })
-    .select("id")
-    .single();
-  if (error) throw error;
-  return data.id;
-}
-
-async function findCategory(db: SupabaseClient, groupId: string, merchant: string): Promise<string | null> {
-  const { data, error } = await db
-    .from("merchant_rules")
-    .select("category_id")
-    .eq("group_id", groupId)
-    .eq("merchant_pattern", merchant)
-    .maybeSingle();
-  if (error) throw error;
-  return data?.category_id ?? null;
-}
-
-async function findCancelTarget(db: SupabaseClient, owner: TokenOwner, payment: Payment): Promise<string | null> {
-  const { data, error } = await db.rpc("find_cancel_target", {
+  const { data, error } = await db.rpc("ingest_sms", {
     p_group: owner.groupId,
     p_user: owner.userId,
-    p_amount: payment.amount,
-    p_merchant: payment.merchant,
-    p_at: payment.occurredAt.toISOString(),
+    p_body: maskBody(input.body),
+    p_body_hash: dedupeHash(input.body),
+    p_source: input.source,
+    p_received_at: input.receivedAt.toISOString(),
+    p_status: status,
+    p_parser_id: parserId,
+    p_kind: payment?.kind ?? null,
+    p_amount: payment?.amount ?? null,
+    p_merchant: payment?.merchant ?? null,
+    p_occurred_at: payment?.occurredAt.toISOString() ?? null,
+    p_issuer: payment?.issuer ?? null,
   });
   if (error) throw error;
-  return (data as string | null) ?? null;
+
+  const row = data as { status: IngestStatus; transaction_id?: string };
+  return row.transaction_id ? { status: row.status, transactionId: row.transaction_id } : { status: row.status };
 }
