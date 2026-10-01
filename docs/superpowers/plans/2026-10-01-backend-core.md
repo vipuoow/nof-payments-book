@@ -67,7 +67,8 @@
 ### Task 1: 프로젝트 기본 틀
 
 **Files:**
-- Create: Next.js 기본 파일 일체(`package.json`, `src/app/*`, `tsconfig.json`, `next.config.ts`, `eslint.config.mjs` 등)
+- Create: Next.js 기본 파일 일체(`package.json`, `src/app/*`, `tsconfig.json`, `eslint.config.mjs` 등)
+- Modify: `next.config.ts`(`output: "standalone"`)
 - Create: `vitest.config.ts`, `src/lib/hash.ts`, `src/lib/hash.test.ts`, `.env.example`, `.githooks/pre-commit`
 - Modify: `.gitignore`, `README.md`
 
@@ -247,12 +248,26 @@ pnpm test                              # 단위 테스트
 비밀값은 `.env.local`에만 두고, 키 이름은 `.env.example`을 참고한다.
 ````
 
-- [ ] **Step 11: 빌드·린트 확인**
+- [ ] **Step 11: NAS 배포 대비 standalone 출력 설정** — `next.config.ts`
 
-Run: `pnpm lint && pnpm build`
-Expected: 오류 없이 완료
+Docker 이미지를 작게 만들기 위해 실행에 필요한 파일만 `.next/standalone`에 모은다.
 
-- [ ] **Step 12: 사용자 승인 후 커밋**
+```ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  output: "standalone",
+};
+
+export default nextConfig;
+```
+
+- [ ] **Step 12: 빌드·린트 확인**
+
+Run: `pnpm lint && pnpm build && test -f .next/standalone/server.js && echo standalone-ok`
+Expected: 오류 없이 완료, 마지막 줄 `standalone-ok`
+
+- [ ] **Step 13: 사용자 승인 후 커밋**
 
 ```bash
 git add -A
@@ -266,28 +281,26 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 2: 로컬 Supabase와 초기 스키마
 
 **Files:**
-- Create: `supabase/config.toml`(CLI 생성), `supabase/migrations/20261001000000_init.sql`, `scripts/write-test-env.sh`, `tests/db/schema.db.test.ts`
+- Create: (`supabase/config.toml`은 미리 생성됨) `supabase/migrations/20261001000000_init.sql`, `scripts/write-test-env.sh`, `tests/db/schema.db.test.ts`
 - Modify: `README.md`
 
 **Interfaces:**
 - Produces: 테이블 `app_settings`, `profiles`, `groups`, `group_members`, `service_invites`, `group_invites`, `ingest_tokens`, `categories`, `merchant_rules`, `raw_messages`, `transactions`, `budgets`. `.env.test.local`에 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 
-- [ ] **Step 1: 승인 확인 후 Docker Desktop·Supabase CLI 설치**
+- [ ] **Step 1: 승인 확인 후 Docker Desktop 설치**
 
-사용자에게 설치 승인을 받는다.
+Supabase CLI(2.119.0)와 `supabase init`, 클라우드 프로젝트 연결(`supabase link`)은 계획 작성 후 미리 끝냈다. 여기서는 Docker만 설치한다. 사용자에게 설치 승인을 받는다.
 
 ```bash
 brew install --cask docker
 open -a Docker            # 첫 실행 시 사용자가 약관 동의 필요
-brew install supabase/tap/supabase
 docker info >/dev/null && supabase --version
 ```
 Expected: Supabase CLI 버전 출력
 
-- [ ] **Step 2: Supabase 초기화와 실행**
+- [ ] **Step 2: 로컬 Supabase 실행**
 
 ```bash
-supabase init
 supabase start
 ```
 Expected: `API URL: http://127.0.0.1:54321` 등 접속 정보 출력
@@ -509,6 +522,8 @@ supabase db reset
 pnpm test:db
 ```
 Expected: 2 passed
+
+클라우드 DB(`supabase db push`)에는 적용하지 않는다. 클라우드 적용은 계획 1을 마친 뒤 사용자 승인을 받아 따로 한다.
 
 - [ ] **Step 8: README에 DB 테스트 방법 추가**
 
@@ -1598,7 +1613,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 6: `POST /api/ingest` 라우트
 
 **Files:**
-- Create: `src/ingest/rate-limit.ts`, `src/ingest/rate-limit.test.ts`, `src/ingest/handler.ts`, `src/lib/supabase-admin.ts`, `src/app/api/ingest/route.ts`, `tests/db/ingest-api.db.test.ts`
+- Create: `src/ingest/rate-limit.ts`, `src/ingest/rate-limit.test.ts`, `src/ingest/handler.ts`, `src/lib/supabase-admin.ts`, `src/app/api/ingest/route.ts`, `tests/db/ingest-api.db.test.ts`, `Dockerfile`, `.dockerignore`
 - Modify: `README.md`
 
 **Interfaces:**
@@ -1882,17 +1897,81 @@ Content-Type: application/json
 | `400` / `401` / `429` | 형식 오류 / 토큰 오류 / 분당 30회 초과 |
 ````
 
-- [ ] **Step 12: 전체 검증**
+- [ ] **Step 12: NAS 배포 대비 Docker 이미지 확인**
+
+NAS(DS920+)에 올릴 이미지 형태를 미리 검증한다. 이 Mac은 arm64, NAS는 amd64라서 여기서 만든 이미지는 동작 확인용이고, NAS용 amd64 빌드는 계획 4에서 GitHub Actions로 한다.
+
+`.dockerignore`:
+
+```gitignore
+.git
+node_modules
+.next
+coverage
+.env*
+supabase/.temp
+supabase/.branches
+tests
+docs
+```
+
+`Dockerfile`:
+
+```dockerfile
+# syntax=docker/dockerfile:1
+FROM node:24-alpine AS deps
+WORKDIR /app
+RUN corepack enable
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+FROM node:24-alpine AS build
+WORKDIR /app
+RUN corepack enable
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN pnpm build
+
+FROM node:24-alpine AS run
+WORKDIR /app
+ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
+RUN addgroup -S app && adduser -S app -G app
+COPY --from=build --chown=app:app /app/.next/standalone ./
+COPY --from=build --chown=app:app /app/.next/static ./.next/static
+COPY --from=build --chown=app:app /app/public ./public
+USER app
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+비밀값은 이미지에 넣지 않고 실행할 때 환경변수로 준다. 컨테이너 안에서 `127.0.0.1`은 컨테이너 자신이므로 로컬 Supabase는 `host.docker.internal`로 접속한다.
+
+```bash
+docker build -t nof-payments-book:local .
+docker run -d --name nof-check -p 3001:3000 \
+  -e SUPABASE_URL=http://host.docker.internal:54321 \
+  -e SUPABASE_SERVICE_ROLE_KEY="$(grep ^SUPABASE_SERVICE_ROLE_KEY= .env.test.local | cut -d= -f2-)" \
+  nof-payments-book:local
+sleep 3
+curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:3001/api/ingest
+curl -s -X POST http://localhost:3001/api/ingest \
+  -H "authorization: Bearer $TOKEN" -H "content-type: application/json" \
+  -d '{"body":"[Web발신]\nKB국민카드1234승인\n홍*동님\n7,700원 일시불\n10/01 12:30\n도커확인상점\n누적100,000원","source":"manual_test"}'
+docker rm -f nof-check
+```
+Expected: 첫 요청 `401`, 두 번째 요청 `{"status":"parsed",...}` (`$TOKEN`은 Step 10에서 발급한 값)
+
+- [ ] **Step 13: 전체 검증**
 
 ```bash
 pnpm lint && pnpm test && pnpm test:db && pnpm build && pnpm secrets:scan
 ```
 Expected: 단위 21 passed, DB(schema 2 + rls 9 + ingest-service 9 + ingest-api 5) 25 passed, 빌드 성공, `no leaks found`
 
-- [ ] **Step 13: 사용자 승인 후 커밋과 push**
+- [ ] **Step 14: 사용자 승인 후 커밋과 push**
 
 ```bash
-git add src tests README.md
+git add src tests README.md Dockerfile .dockerignore
 git commit -m "feat: POST /api/ingest 결제 문자 수신 API 추가
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
