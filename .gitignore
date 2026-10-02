@@ -23,3 +23,10 @@ next-env.d.ts
 coverage/
 supabase/.temp/
 supabase/.branches/
+
+# 키 파일 (값은 저장소 밖에 둔다)
+keys/
+*.key
+*api_key*
+*.pem
+*.rtf
