@@ -86,14 +86,14 @@ Container Manager 프로젝트(docker compose) 하나. 폴더(예: `/volume1/doc
 
 ## 4. 배포 순서
 
-1. **저장소 준비**: `/api/health`, `Dockerfile` 빌드 인자, GitHub Actions 워크플로, `deploy/compose.yaml`·`deploy/.env.example`·백업 스크립트, 커밋 전 검사가 `.env.production.local` 값도 대조하도록 확장, 안내 문서 `docs/deploy/`.
+1. **저장소 준비**: `/api/health`, `Dockerfile` 빌드 인자, GitHub Actions 워크플로, `deploy/compose.yaml`·`deploy/.env.example`·백업 스크립트, 안내 문서 `docs/deploy/`.
 2. **새 DB에서 마이그레이션 확인**: 저장소를 임시 폴더에 복사하고 `project_id`·포트를 바꿔 별도의 로컬 Supabase를 띄워, 마이그레이션 전체 적용 + DB 테스트 후 정리한다. 기존 로컬 DB는 건드리지 않는다.
 3. **클라우드 DB 적용**(승인 후): 그룹 카테고리 이름 중복 확인 쿼리 → 적용 직전 백업(`pg_dump`) → `supabase db push`.
 4. **클라우드 Auth 설정**: 사이트 주소·이동 허용 주소를 `https://ledger.<도메인>`으로, 이메일 공급자 끔, Google 공급자 켬(클라이언트 ID·비밀값). Google Cloud Console의 승인된 리디렉션 주소에 Supabase 콜백이 있는지 확인.
 5. **Cloudflare**: 네임서버 적용(Active) 확인 → Tunnel 생성 → 공개 주소 `ledger.<도메인>` → `http://app:3000`.
 6. **이미지**: GitHub 저장소 변수 설정 → `v1.0.0` 태그(승인 후) → 빌드 확인 → GHCR 패키지 공개.
 7. **NAS**: Container Manager 설치 → SSH 켜기·키 등록 → 프로젝트 폴더·`compose.yaml`·`.env`(600) 배치 → 프로젝트 실행.
-8. **확인**: `/api/health` → 아이폰 Google 로그인 → 운영자 지정(`scripts/grant-operator.ts`, 이 Mac의 `.env.production.local`) → 그룹 만들기·배우자 초대 → 두 사람 기기 연결 → **잠긴 아이폰 문자 전송** → 다음 날 백업 파일 확인 → 백업을 로컬에 복구해 거래 수 확인.
+8. **확인**: `/api/health` → 아이폰 Google 로그인 → 운영자 지정(`scripts/grant-operator.ts`, 이 Mac의 `.env.cloud`) → 그룹 만들기·배우자 초대 → 두 사람 기기 연결 → **잠긴 아이폰 문자 전송** → 다음 날 백업 파일 확인 → 백업을 로컬에 복구해 거래 수 확인.
 
 ## 5. 비밀값
 
@@ -101,7 +101,7 @@ Container Manager 프로젝트(docker compose) 하나. 폴더(예: `/volume1/doc
 |---|---|---|
 | NAS `.env`(600) | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL`, `TYPESAFE_API_KEY`, `TUNNEL_TOKEN`, `BACKUP_DATABASE_URL`(Session pooler, 비밀번호 포함) | 저장소에는 키 이름만(`deploy/.env.example`) |
 | GitHub 저장소 변수 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 공개 값 |
-| 이 Mac `.env.production.local` | 운영자 지정 스크립트용 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | git 제외. 커밋 전 검사가 이 값을 대조 |
+| 이 Mac `.env.cloud` | 운영자 지정 스크립트용 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | git 제외. 커밋 전 검사가 이 값을 대조 |
 
 ## 6. 되돌리기와 운영
 
