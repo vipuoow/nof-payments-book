@@ -32,3 +32,5 @@ keys/
 *api_key*
 *.pem
 *.rtf
+deploy/.env
+deploy/backups/

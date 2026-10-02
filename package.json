@@ -11,7 +11,8 @@
     "test:db": "vitest run tests/db --no-file-parallelism",
     "secrets:scan": "gitleaks git --redact .",
     "operator:grant": "node --env-file=.env.local scripts/grant-operator.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:deploy": "sh tests/deploy/backup.test.sh && sh tests/deploy/compose.test.sh"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

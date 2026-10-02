@@ -1,0 +1,47 @@
+# NAS Container Manager 프로젝트 "nof-ledger". 같은 폴더의 .env(권한 600)를 쓴다.
+name: nof-ledger
+
+services:
+  app:
+    image: ghcr.io/vipuoow/nof-payments-book:latest
+    restart: unless-stopped
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL:?}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?}
+      APP_URL: ${APP_URL:?}
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+    # 외부 포트를 열지 않는다. cloudflared만 app:3000으로 접속한다.
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?}
+    depends_on: [app]
+
+  watchtower:
+    image: nickfedor/watchtower:latest
+    restart: unless-stopped
+    environment:
+      WATCHTOWER_LABEL_ENABLE: "true"
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_POLL_INTERVAL: "300"
+      TZ: Asia/Seoul
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    # sh가 PID 1이면 정지 신호를 무시해 10초씩 기다리므로 init을 둔다
+    init: true
+    command: sh /backup.sh
+    environment:
+      BACKUP_DATABASE_URL: ${BACKUP_DATABASE_URL:?}
+      TZ: Asia/Seoul
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - ./backups:/backups
