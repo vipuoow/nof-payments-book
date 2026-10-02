@@ -57,16 +57,20 @@ export async function categorizeTransaction(
   if (error) throw error;
   if (tx.category_id || tx.kind === "manual") return "skipped";
 
-  const [categories, setting] = await Promise.all([
+  const [categories, hidden, setting] = await Promise.all([
     db.from("categories").select("id, name, group_id")
       .or(`group_id.is.null,group_id.eq.${tx.group_id}`)
       .order("sort_order"),
+    db.from("category_hidden").select("category_id").eq("group_id", tx.group_id),
     db.from("app_settings").select("value").eq("key", "category_ai_min_confidence").single(),
   ]);
   if (categories.error) throw categories.error;
+  if (hidden.error) throw hidden.error;
   if (setting.error) throw setting.error;
 
-  const options = categoryOptions(categories.data);
+  // 그룹이 숨긴 기본 카테고리는 고르지 않는다
+  const hiddenIds = new Set(hidden.data.map((h) => h.category_id));
+  const options = categoryOptions(categories.data.filter((c) => !hiddenIds.has(c.id)));
   const categoryId = pickCategory(await classify(tx.merchant, options), options, Number(setting.data.value));
   if (!categoryId) return "undecided";
 
@@ -77,5 +81,14 @@ export async function categorizeTransaction(
     .is("category_id", null)
     .select("id");
   if (updateError) throw updateError;
-  return updated.length > 0 ? "categorized" : "skipped";
+  if (updated.length === 0) return "skipped";
+
+  // 이 결제에 연결된 취소가 미지정이면 같은 카테고리로 맞춰 카테고리별 합계가 상쇄되게 한다
+  const { error: cancelError } = await db
+    .from("transactions")
+    .update({ category_id: categoryId, category_source: "ai" })
+    .eq("cancels_transaction_id", transactionId)
+    .is("category_id", null);
+  if (cancelError) throw cancelError;
+  return "categorized";
 }

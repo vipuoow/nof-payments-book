@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { APPROVAL } from "@/parsers/__fixtures__/kb-card";
+import { APPROVAL, CANCEL } from "@/parsers/__fixtures__/kb-card";
 import { ingestMessage } from "@/ingest/service";
 import { categorizeTransaction } from "@/categorize/categorize";
 import type { CategoryClassifier, CategoryOption } from "@/categorize/typesafe";
@@ -92,5 +92,25 @@ describe("categorizeTransaction", () => {
     const classify = answer("식비", 0.99);
     expect(await categorizeTransaction(db, classify, data!.id)).toBe("skipped");
     expect(classify).not.toHaveBeenCalled();
+  });
+
+  it("그룹이 숨긴 기본 카테고리는 선택지에서 빠진다", async () => {
+    const { g, id } = await newApproval("cat-hidden");
+    await db.from("category_hidden").insert({ group_id: g.groupId, category_id: await defaultCategoryId("문화") });
+    let seen: CategoryOption[] = [];
+    const classify: CategoryClassifier = async (_m, options) => { seen = options; return null; };
+    await categorizeTransaction(db, classify, id);
+    expect(seen.map((o) => o.name)).not.toContain("문화");
+    expect(seen.map((o) => o.name)).toContain("카페");
+  });
+
+  it("결제를 분류하면 연결된 미지정 취소도 같은 카테고리가 된다", async () => {
+    const { g, id } = await newApproval("cat-cancel-sync");
+    const cancel = await ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId },
+      { body: CANCEL, receivedAt: received, source: "manual_test" });
+    expect(await tx(cancel.transactionId!)).toEqual({ category_id: null, category_source: null });
+
+    expect(await categorizeTransaction(db, answer("카페", 0.98), id)).toBe("categorized");
+    expect(await tx(cancel.transactionId!)).toEqual({ category_id: await defaultCategoryId("카페"), category_source: "ai" });
   });
 });
