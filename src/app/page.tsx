@@ -1,24 +1,49 @@
 import Link from "next/link";
+import { AppMenu } from "@/components/app-menu";
+import { DayList } from "@/components/ledger/day-list";
+import { MonthSummary } from "@/components/ledger/month-summary";
+import { TxSheet } from "@/components/ledger/tx-sheet";
+import { NoGroup } from "@/components/no-group";
+import { isUuid } from "@/ledger/forms";
+import { monthParam, parseMonthParam } from "@/ledger/month";
+import { loadMonth, loadTransaction } from "@/ledger/queries";
+import { groupByDay, totals } from "@/ledger/summary";
 import { loadMe } from "@/lib/session";
-import { signOut } from "./actions";
 
-export default async function Home() {
-  const { me } = await loadMe();
+export default async function Home({ searchParams }: PageProps<"/">) {
+  const { supabase, me } = await loadMe();
+  if (!me.groupId) return <NoGroup me={me} />;
+
+  const sp = await searchParams;
+  const now = new Date();
+  const month = parseMonthParam(sp.month, now);
+  const data = await loadMonth(supabase, me.groupId, month);
+  const sum = totals(data.txs, data.members);
+  const base = `/?month=${monthParam(month)}`;
+  const selected = isUuid(sp.tx) ? await loadTransaction(supabase, sp.tx) : null;
+
   return (
-    <main className="mx-auto max-w-sm p-6">
-      <h1 className="mb-1 text-xl font-bold">{me.displayName}님</h1>
-      <p className="mb-6 text-gray-600">
-        {me.groupId ? (me.role === "owner" ? "그룹장" : "그룹원") : "아직 그룹이 없습니다"}
-      </p>
-      <nav className="flex flex-col gap-2">
-        {!me.groupId && me.canCreateGroup && <Link className="underline" href="/group/new">그룹 만들기</Link>}
-        {me.groupId && <Link className="underline" href="/group">그룹</Link>}
-        {me.groupId && <Link className="underline" href="/devices">내 기기 연결</Link>}
-        {me.isOperator && <Link className="underline" href="/operator">운영자</Link>}
-      </nav>
-      <form action={signOut} className="mt-8">
-        <button className="text-sm text-gray-500 underline">로그아웃</button>
-      </form>
+    <main className="mx-auto w-full max-w-[480px] px-4 pb-24">
+      <header className="flex items-center justify-between py-3">
+        <AppMenu me={me} />
+        <Link href="/new" aria-label="직접 입력" className="px-2 text-2xl text-accent">+</Link>
+      </header>
+      <MonthSummary month={month} now={now} total={sum.total} byMember={sum.byMember} />
+      {data.unparsedCount > 0 && (
+        <Link href="/unparsed" className="mt-3 block rounded-xl bg-surface px-4 py-3 text-sm">
+          확인할 문자 {data.unparsedCount}건 <span className="float-right text-muted">›</span>
+        </Link>
+      )}
+      <DayList
+        groups={groupByDay(data.txs)}
+        base={base}
+        categoryNames={data.categoryNames}
+        memberNames={new Map(data.members.map((m) => [m.userId, m.name]))}
+        cancelledIds={data.cancelledIds}
+      />
+      {selected && (
+        <TxSheet tx={selected.tx} rawBody={selected.rawBody} choices={data.categoryChoices} members={data.members} closeHref={base} />
+      )}
     </main>
   );
 }
