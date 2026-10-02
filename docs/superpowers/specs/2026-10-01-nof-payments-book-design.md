@@ -47,6 +47,7 @@
 | `invite_ttl_days` | 7 |
 | `raw_message_retention_days` | 365 |
 | `budget_warning_ratio` | 0.8 |
+| `category_ai_min_confidence` | 0.7 |
 
 **가입 흐름**
 
@@ -89,7 +90,7 @@
 | `group_invites` | `group_id`, `token_hash`, `created_by`, `expires_at`, `used_by`, `revoked_at` | 그룹장만 발급 |
 | `ingest_tokens` | `user_id`, `token_hash`, `label`, `last_used_at`, `revoked_at` | 원문 토큰은 발급 시 한 번만 표시 |
 | `raw_messages` | `group_id`, `user_id`, `body`(마스킹), `body_hash`, `source`, `received_at`, `status`, `parser_id` | `status`: parsed / unparsed / ignored / duplicate |
-| `transactions` | `group_id`, `user_id`, `raw_message_id`, `kind`(approval/cancel/manual), `amount`, `merchant`, `occurred_at`, `issuer`, `category_id`, `cancels_transaction_id`, `memo` | 취소는 음수 금액 |
+| `transactions` | `group_id`, `user_id`, `raw_message_id`, `kind`(approval/cancel/manual), `amount`, `merchant`, `occurred_at`, `issuer`, `category_id`, `category_source`(rule/ai/user), `cancels_transaction_id`, `memo` | 취소는 음수 금액. `category_source`는 카테고리를 정한 주체 |
 | `categories` | `group_id`(null이면 기본), `name`, `sort_order` | |
 | `merchant_rules` | `group_id`, `merchant_pattern`, `category_id` | 카테고리 수정 시 학습 |
 | `budgets` | `group_id`, `category_id`(null이면 전체), `month`, `amount` | |
@@ -143,7 +144,11 @@ Content-Type: application/json
    - `ignore`: 후불교통 결제 예정 안내처럼 결제가 아닌 문자다. 거래를 만들지 않는다.
    - `unknown`: `unparsed` 상태로 둔다. 미분류 화면에서 처리한다.
 5. 문자에 연도가 없으면 `receivedAt`을 기준으로 정한다. 문자의 월이 수신 월보다 크면(예: 1월에 받은 12월 결제) 전년도로 본다.
-6. 카테고리는 `merchant_rules`에 맞는 규칙이 있으면 그대로 정하고, 없으면 `category_id`를 null(화면에는 "미지정")로 둔다.
+6. 카테고리는 `merchant_rules`에 맞는 규칙이 있으면 그대로 정한다(`rule`). 취소는 연결된 승인 거래의 카테고리를 이어받는다. 둘 다 없으면 `category_id`를 null(화면에는 "미지정")로 둔다.
+7. 카테고리가 비어 있는 승인·취소 거래는 응답을 보낸 뒤 TypeSafe의 jev 모델로 분류한다(Choice 질문, 선택지는 기본 + 그룹 카테고리).
+   - jev 확신이 `category_ai_min_confidence`(0.7) 이상이고 "기타"가 아닐 때만 카테고리를 넣는다(`ai`). 그 밖에는 "미지정"으로 둔다.
+   - jev가 느리거나 실패해도 문자 저장과 응답에는 영향이 없다(5초 뒤 포기). `TYPESAFE_API_KEY`가 없으면 분류하지 않는다.
+   - jev 결과는 `merchant_rules`에 저장하지 않는다. 규칙은 사용자가 고친 결과로만 배운다. 사용자가 카테고리를 바꾸면 `category_source`는 `user`가 된다.
 
 **분석기 인터페이스**
 
@@ -192,6 +197,7 @@ type ParseResult =
 - **비밀값**
   - 실제 값은 `.env`에만 둔다. 저장소에는 키 이름만 있는 `.env.example`을 커밋한다.
   - 커밋 전에 비밀값 검사(gitleaks)를 실행한다.
+- **외부 전송(TypeSafe)**: 카테고리 자동 분류에는 가맹점 이름과 카테고리 이름·설명만 보낸다. 금액·사람·날짜·문자 원문은 보내지 않는다. 키와 가맹점 이름은 로그에 남기지 않는다.
 - **원문 마스킹**: 저장 전에 카드번호 일부·승인번호 등 식별 정보를 가린다.
 - **원문 보관 기간**: `raw_message_retention_days`가 지난 원문은 삭제한다. 거래 데이터는 유지한다.
 - **공개 저장소**: 실제 문자, 사이트 주소, NAS 접속 정보, 네트워크 설정은 커밋하지 않는다.
