@@ -1,18 +1,16 @@
-import Link from "next/link";
 import { deleteTxAction } from "@/app/tx-actions";
 import { ActionButton } from "@/components/action-button";
 import { kstLocalValue } from "@/ledger/month";
 import { formatWon, type LedgerTx, type Member } from "@/ledger/summary";
 import { CategoryPicker } from "./category-picker";
+import { ModalSheet } from "./modal-sheet";
 import { TxEditForm } from "./tx-edit-form";
 
 export function TxSheet({
   tx, rawBody, choices, members, closeHref,
 }: { tx: LedgerTx; rawBody: string | null; choices: { id: string; name: string }[]; members: Member[]; closeHref: string }) {
   return (
-    <div className="fixed inset-0 z-20 flex flex-col justify-end">
-      <Link href={closeHref} scroll={false} aria-label="닫기" className="absolute inset-0 bg-black/30" />
-      <section role="dialog" aria-label="거래 수정" className="relative mx-auto max-h-[85vh] w-full max-w-[480px] overflow-y-auto rounded-t-2xl bg-background p-4 pb-10">
+    <ModalSheet label="거래 수정" closeHref={closeHref}>
         <div className="mb-4 flex items-baseline justify-between gap-3">
           <h2 className="truncate font-semibold">{tx.merchant}</h2>
           <span className="tabular shrink-0">{formatWon(tx.amount)}원</span>
@@ -39,7 +37,6 @@ export function TxSheet({
             </details>
           )}
         </details>
-      </section>
-    </div>
+    </ModalSheet>
   );
 }

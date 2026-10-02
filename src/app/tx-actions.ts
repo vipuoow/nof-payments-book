@@ -55,8 +55,9 @@ export async function updateTxAction(_prev: ActionState, formData: FormData): Pr
 /** 수동 입력 거래만 삭제한다. */
 export async function deleteTxAction(txId: string, returnTo: string): Promise<ActionState> {
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("transactions").delete().eq("id", txId).eq("kind", "manual");
-  if (error) return { error: FAIL };
+  const { data, error } = await supabase.from("transactions").delete()
+    .eq("id", txId).eq("kind", "manual").select("id");
+  if (error || data.length === 0) return { error: FAIL };
   revalidatePath("/");
   redirect(safeNextPath(returnTo), RedirectType.replace);
 }
@@ -68,6 +69,11 @@ export async function createTxAction(_prev: ActionState, formData: FormData): Pr
   const { supabase, me } = await loadMe();
   if (!me.groupId) return { error: FAIL, values: valuesOf(formData) };
   const v = parsed.value;
+  const rawId = text(formData, "rawId");
+  if (isUuid(rawId)) {
+    const { data: raw } = await supabase.from("raw_messages").select("id").eq("id", rawId).eq("status", "unparsed").maybeSingle();
+    if (!raw) return { error: "이미 처리된 문자입니다.", values: valuesOf(formData) };
+  }
   const { error } = await supabase.from("transactions").insert({
     group_id: me.groupId,
     user_id: v.userId,
@@ -80,10 +86,10 @@ export async function createTxAction(_prev: ActionState, formData: FormData): Pr
   });
   if (error) return { error: FAIL, values: valuesOf(formData) };
 
-  const rawId = text(formData, "rawId");
   if (isUuid(rawId)) {
     // 실패해도 거래는 이미 저장됐다. 문자가 목록에 남으면 사용자가 무시할 수 있다.
-    const { error: rawError } = await supabase.from("raw_messages").update({ status: "parsed" }).eq("id", rawId);
+    const { error: rawError } = await supabase.from("raw_messages").update({ status: "parsed" })
+      .eq("id", rawId).eq("status", "unparsed");
     if (rawError) console.warn(`[unparsed] 문자 ${rawId} 상태 변경 실패: ${rawError.message}`);
   }
   revalidatePath("/");

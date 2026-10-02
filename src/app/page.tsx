@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { AppMenu } from "@/components/app-menu";
+import { BudgetSummary } from "@/components/ledger/budget-summary";
+import { spentByCategory } from "@/ledger/budget";
 import { DayList } from "@/components/ledger/day-list";
 import { MonthSummary } from "@/components/ledger/month-summary";
 import { TxSheet } from "@/components/ledger/tx-sheet";
@@ -29,6 +31,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         <Link href="/new" aria-label="직접 입력" className="px-2 text-2xl text-accent">+</Link>
       </header>
       <MonthSummary month={month} now={now} total={sum.total} byMember={sum.byMember} />
+      <BudgetSummary
+        budgets={data.budgets}
+        spentTotal={sum.total}
+        spentByCategory={spentByCategory(data.txs)}
+        categoryNames={data.categoryNames}
+        warnRatio={data.warnRatio}
+        hiddenIds={data.hiddenIds}
+      />
       {data.unparsedCount > 0 && (
         <Link href="/unparsed" className="mt-3 block rounded-xl bg-surface px-4 py-3 text-sm">
           확인할 문자 {data.unparsedCount}건 <span className="float-right text-muted">›</span>

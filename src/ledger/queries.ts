@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { categoryOptions, type CategoryRow } from "@/categorize/categorize";
+import { budgetMonth, effectiveBudgets } from "./budget";
 import { monthRange, type Month } from "./month";
 import type { CategorySource, LedgerTx, Member, TxKind } from "./summary";
 
@@ -12,6 +13,10 @@ export type MonthData = {
   categoryChoices: CategoryLite[];
   cancelledIds: Set<string>;
   unparsedCount: number;
+  budgets: Map<string, number>;
+  warnRatio: number;
+  /** 그룹이 숨긴 기본 카테고리 */
+  hiddenIds: Set<string>;
 };
 
 const TX_COLUMNS =
@@ -51,20 +56,35 @@ export async function loadMembers(db: SupabaseClient, groupId: string): Promise<
     .map((r) => ({ userId: r.user_id, name: names.get(r.user_id) ?? "알 수 없음" }));
 }
 
-/** 보이는 카테고리(기본 + 내 그룹, RLS). 버튼용은 이름이 겹치면 그룹 것만. */
+/** 보이는 카테고리(기본 + 내 그룹, RLS). 버튼용은 숨긴 것을 빼고 이름이 겹치면 그룹 것만. */
 export async function loadCategories(db: SupabaseClient) {
-  const rows = await must<CategoryRow[]>(
-    db.from("categories").select("id, name, group_id").order("sort_order").order("name"),
-  );
+  const [rows, hidden] = await Promise.all([
+    must<CategoryRow[]>(db.from("categories").select("id, name, group_id").order("sort_order").order("name")),
+    must<{ category_id: string }[]>(db.from("category_hidden").select("category_id")),
+  ]);
+  const hiddenIds = new Set(hidden.map((h) => h.category_id));
   return {
     names: new Map(rows.map((r) => [r.id, r.name])),
-    choices: categoryOptions(rows).map(({ id, name }) => ({ id, name })),
+    choices: categoryOptions(rows.filter((r) => !hiddenIds.has(r.id))).map(({ id, name }) => ({ id, name })),
+    rows,
+    hiddenIds,
   };
+}
+
+/** 그 달에 적용되는 예산(키: 카테고리 id 또는 TOTAL) */
+export async function loadBudgets(db: SupabaseClient, month: Month): Promise<Map<string, number>> {
+  const rows = await must<{ category_id: string | null; month: string; amount: number }[]>(
+    db.from("budgets").select("category_id, month, amount").lte("month", budgetMonth(month)),
+  );
+  return effectiveBudgets(
+    rows.map((r) => ({ categoryId: r.category_id, month: r.month, amount: Number(r.amount) })),
+    month,
+  );
 }
 
 export async function loadMonth(db: SupabaseClient, groupId: string, month: Month): Promise<MonthData> {
   const { from, to } = monthRange(month);
-  const [rows, members, categories, unparsed] = await Promise.all([
+  const [rows, members, categories, unparsed, budgets, warn] = await Promise.all([
     must<TxRow[]>(
       db.from("transactions").select(TX_COLUMNS)
         .gte("occurred_at", from.toISOString()).lt("occurred_at", to.toISOString())
@@ -73,8 +93,11 @@ export async function loadMonth(db: SupabaseClient, groupId: string, month: Mont
     loadMembers(db, groupId),
     loadCategories(db),
     db.from("raw_messages").select("id", { count: "exact", head: true }).eq("status", "unparsed"),
+    loadBudgets(db, month),
+    db.from("app_settings").select("value").eq("key", "budget_warning_ratio").single(),
   ]);
   if (unparsed.error) throw unparsed.error;
+  if (warn.error) throw warn.error;
 
   const txs = rows.map(toLedgerTx);
   // 취소가 연결된 결제. 취소는 결제 후 60일 안에 오므로(find_cancel_target) 그 범위의 취소만 본다.
@@ -93,6 +116,9 @@ export async function loadMonth(db: SupabaseClient, groupId: string, month: Mont
     categoryChoices: categories.choices,
     cancelledIds: new Set(cancelled.map((c) => c.cancels_transaction_id)),
     unparsedCount: unparsed.count ?? 0,
+    budgets,
+    warnRatio: Number(warn.data.value),
+    hiddenIds: categories.hiddenIds,
   };
 }
 

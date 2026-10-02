@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { APPROVAL, APPROVAL_SMALL, UNKNOWN_KB } from "@/parsers/__fixtures__/kb-card";
 import { ingestMessage } from "@/ingest/service";
 import { adminClient, createGroupFixture, createLoneUser, type GroupFixture } from "../tests/helpers/db";
-import { at, signIn, todayMmdd } from "./support";
+import { at, signIn, kstStamp } from "./support";
 
 const db = adminClient();
 const send = (g: GroupFixture, who: "owner" | "member", body: string) =>
@@ -10,10 +10,9 @@ const send = (g: GroupFixture, who: "owner" | "member", body: string) =>
 
 test("이번 달 합계·사람별 합계·날짜별 거래와 미분류 줄을 보여 준다", async ({ page, context }) => {
   const g = await createGroupFixture("e2e-home");
-  const day = todayMmdd();
-  await send(g, "owner", at(APPROVAL, `${day} 00:01`));
-  await send(g, "owner", at(APPROVAL, `${day} 00:02`));
-  await send(g, "member", at(APPROVAL_SMALL, `${day} 00:03`));
+  await send(g, "owner", at(APPROVAL, kstStamp(3)));
+  await send(g, "owner", at(APPROVAL, kstStamp(2)));
+  await send(g, "member", at(APPROVAL_SMALL, kstStamp(1)));
   await send(g, "member", UNKNOWN_KB);
 
   await signIn(context, g.owner.email);
@@ -36,7 +35,7 @@ test("이번 달 합계·사람별 합계·날짜별 거래와 미분류 줄을 
 test("다른 그룹의 거래 id를 주소에 넣어도 시트가 열리지 않는다", async ({ page, context }) => {
   const mine = await createGroupFixture("e2e-home-mine");
   const other = await createGroupFixture("e2e-home-other");
-  const r = await send(other, "owner", at(APPROVAL, `${todayMmdd()} 00:01`));
+  const r = await send(other, "owner", at(APPROVAL, kstStamp(3)));
 
   await signIn(context, mine.owner.email);
   await page.goto(`/?tx=${r.transactionId}`);

@@ -30,11 +30,11 @@ export async function signIn(context: BrowserContext, email: string): Promise<vo
   );
 }
 
-/** 오늘(KST) "MM/DD" */
-export function todayMmdd(now = new Date()): string {
-  const k = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  return `${String(k.getUTCMonth() + 1).padStart(2, "0")}/${String(k.getUTCDate()).padStart(2, "0")}`;
-}
-
 /** 같은 형식에서 일시만 바꾼 문자 */
 export const at = (body: string, mmddHhmm: string) => body.replace(/\d{2}\/\d{2} \d{2}:\d{2}/, mmddHhmm);
+/** 지금으로부터 minutesAgo분 전의 KST "MM/DD HH:mm". 자정 무렵에도 미래 시각이 되지 않는다. */
+export function kstStamp(minutesAgo: number, now = new Date()): string {
+  const k = new Date(now.getTime() - minutesAgo * 60_000 + 9 * 60 * 60 * 1000);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(k.getUTCMonth() + 1)}/${p(k.getUTCDate())} ${p(k.getUTCHours())}:${p(k.getUTCMinutes())}`;
+}

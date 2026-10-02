@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { APPROVAL, UNKNOWN_KB } from "@/parsers/__fixtures__/kb-card";
 import { ingestMessage } from "@/ingest/service";
 import { adminClient, createGroupFixture } from "../tests/helpers/db";
-import { at, signIn, todayMmdd } from "./support";
+import { at, signIn, kstStamp } from "./support";
 
 const db = adminClient();
 
@@ -24,7 +24,7 @@ test("검증 오류 뒤에도 사람·카테고리 선택이 유지된다", asyn
 test("거래 시트의 입력칸은 16px 이상이라 아이폰이 확대하지 않는다", async ({ page, context }) => {
   const g = await createGroupFixture("e2e-zoom");
   const r = await ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId },
-    { body: at(APPROVAL, `${todayMmdd()} 00:01`), receivedAt: new Date(), source: "manual_test" });
+    { body: at(APPROVAL, kstStamp(3)), receivedAt: new Date(), source: "manual_test" });
   await signIn(context, g.owner.email);
   await page.goto(`/?tx=${r.transactionId}`);
   await page.getByRole("dialog", { name: "거래 수정" }).getByText("더 보기").click();
@@ -37,7 +37,7 @@ test("거래 시트의 입력칸은 16px 이상이라 아이폰이 확대하지 
 test("카테고리를 고른 뒤 뒤로 가도 시트가 다시 열리지 않는다", async ({ page, context }) => {
   const g = await createGroupFixture("e2e-back");
   await ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId },
-    { body: at(APPROVAL, `${todayMmdd()} 00:01`), receivedAt: new Date(), source: "manual_test" });
+    { body: at(APPROVAL, kstStamp(3)), receivedAt: new Date(), source: "manual_test" });
   await signIn(context, g.owner.email);
   await page.goto("/");
   await page.getByTestId("tx-row").first().click();
