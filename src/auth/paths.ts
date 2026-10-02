@@ -7,7 +7,9 @@ export function isPublicPath(pathname: string): boolean {
     pathname.startsWith("/auth/") ||
     // 홈 화면에 추가할 때 브라우저가 쿠키 없이 받을 수 있다
     pathname === "/manifest.webmanifest" ||
-    pathname === "/apple-icon"
+    pathname === "/apple-icon" ||
+    // 배포 확인(버전만 돌려주고 DB를 부르지 않는다)
+    pathname === "/api/health"
   );
 }
 

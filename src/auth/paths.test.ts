@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { isPublicPath, safeNextPath } from "./paths";
 
 describe("isPublicPath", () => {
+  it("배포 확인 주소는 로그인 없이 연다", () => {
+    expect(isPublicPath("/api/health")).toBe(true);
+    expect(isPublicPath("/api/healthx")).toBe(false);
+  });
+
   it("PWA 매니페스트·아이콘은 로그인 없이 연다", () => {
     expect(isPublicPath("/manifest.webmanifest")).toBe(true);
     expect(isPublicPath("/apple-icon")).toBe(true);
