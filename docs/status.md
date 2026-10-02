@@ -1,135 +1,103 @@
-# 가족 가계부 서비스 개요 및 진행 현황
+# 가족 가계부 진행 현황 (이어서 작업하기)
 
-작성일: 2026-10-01
+최종 갱신: 2026-10-02
 
-## 1. 서비스 개요
+공개 저장소이므로 도메인·사이트 주소·NAS 접속 정보·네트워크 설정·비밀값은 이 문서에 쓰지 않는다. 주소는 `ledger.<도메인>`, NAS 폴더는 `<NAS 폴더>`로 쓴다.
 
-부부가 사용하는 국민카드 소비를 한곳에 모아 가족 전체 지출과 사람별·카테고리별 소비를 확인하는 가계부입니다.
+## 1. 한눈에 보기
 
-| 항목 | 내용 |
+| 구분 | 상태 |
 |---|---|
-| 사용자 | 본인과 아내, 두 사람 모두 아이폰 사용 |
-| 대상 카드 | 국민카드만 연동. 카카오카드는 제외 |
-| 수집 정보 | 결제 문자에서 금액·일시·가맹점 등을 추출 |
-| 주요 화면 | 가족 총지출, 개인별 지출, 월별·카테고리별 소비 |
-| 공유 방식 | 각자 접속하되 같은 가족 가계부 조회 |
-| 핵심 사용성 | 결제할 때마다 앱을 열거나 직접 입력하는 과정을 최소화 |
+| 앱 기능 | **완료**: 문자 수신·분석, Google 로그인·초대, jev 자동 분류, 홈·거래 시트·직접 입력·미분류 문자, 예산·카테고리 관리·기기 연결 안내 |
+| 배포(계획 4) | **진행 중**: 저장소 작업(Task 1~4) 완료, 운영 작업(Task 5~10) 남음 |
+| 다음 할 일 | 계획 4 Task 5(클라우드 DB 적용) 준비 → 4장 |
 
-가장 중요한 미해결 과제는 **잠긴 아이폰에서 문자를 안정적으로 전달하는 방식**입니다. NAS로 서버를 옮기는 것과 별도로 검증해야 합니다.
+## 2. 완료한 계획
 
-## 2. 현재 서비스와 목표 구성
-
-| 구분 | 현재 | 목표 |
+| 계획 | 문서 | 내용 |
 |---|---|---|
-| 서비스 실행·배포 | Sites 호스팅 | Synology NAS |
-| 데이터 저장 | 기존 서비스의 데이터베이스 | Supabase 클라우드 |
-| 코드 관리 | 기존 프로젝트 소스 | GitHub 공개 저장소 (비밀값은 `.env`로만 관리) |
-| 로그인 | ChatGPT 로그인 | NAS 이전 가능성 확인 후 결정 |
-| 문자 전달 | 단축어에서 브라우저를 여는 방식 | 단축어가 서버에 직접 전송하는 방식 |
-| 개발·운영 작업 | Codex | Codex에서 개발·검증·승인 후 배포 |
+| 1 백엔드 핵심 | `docs/superpowers/plans/2026-10-01-backend-core.md` | DB·RLS, 국민카드 분석기, `POST /api/ingest` |
+| 2 인증·초대 | `docs/superpowers/plans/2026-10-01-auth-invites.md` | Google 로그인, 운영자→그룹장→배우자 초대, 기기 토큰 |
+| jev 자동 분류 | `docs/superpowers/plans/2026-10-02-jev-category.md` | TypeSafe(jev)로 미지정 거래 카테고리 분류, 출처(rule/ai/user) |
+| 3-1 핵심 화면 | `docs/superpowers/plans/2026-10-02-screens-core.md` | 홈(합계+월별 거래), 거래 시트(카테고리 학습), 직접 입력, 미분류 문자, PWA, Playwright |
+| 3-2 관리 화면 | `docs/superpowers/plans/2026-10-02-screens-more.md` | 매달 이어지는 예산, 카테고리 숨김·관리, 아이폰/갤럭시 기기 연결 안내 |
 
-목표 구성은 검토안입니다. NAS 설치·배포, Git 및 Supabase 연동이 완료된 상태는 아닙니다.
+설계 문서는 `docs/superpowers/specs/`에 있다. 통계 화면과 기존 서비스 데이터 이전은 사용자 결정으로 하지 않는다.
 
-예상 데이터 흐름:
+**테스트(2026-10-02 기준)**: 단위 74, DB 79, 화면(Playwright) 29, 배포 묶음 테스트 모두 통과.
 
-```text
-본인·아내 아이폰의 국민카드 문자
-  → 각 아이폰의 단축어 자동화
-  → HTTPS로 NAS의 문자 수신 서버에 전송
-  → 문자 분석·중복 확인·사용자 구분
-  → Supabase에 거래 저장
-  → 부부가 가계부에서 가족·개인·카테고리별 소비 조회
+## 3. 계획 4 (NAS 배포) 진행 상황
+
+계획: `docs/superpowers/plans/2026-10-02-deploy-nas.md`, 설계: `docs/superpowers/specs/2026-10-02-deploy-nas-design.md`
+
+**정한 것**: Cloudflare Tunnel(포트 개방 없음), 닷네임에서 산 도메인을 Cloudflare 네임서버로 연결해 `ledger.<도메인>` 사용, 모든 단계를 Claude가 수행(로그인·비밀번호 입력만 사용자), `v*` 태그를 붙이면 GitHub Actions가 amd64 이미지를 GHCR(공개)에 올리고 NAS의 Watchtower(`nickfedor/watchtower`)가 자동 반영, NAS가 매일 KST 04:00에 DB 백업(30일 보관), 기존 데이터는 옮기지 않음.
+
+| Task | 상태 | 메모 |
+|---|---|---|
+| 1 `/api/health`·이미지 빌드 인자 | 완료 | 이미지 안에 비밀값 없음 확인 |
+| 2 GitHub Actions 이미지 빌드 | 완료 | 태그를 붙여야 실행된다(아직 태그 없음) |
+| 3 NAS 묶음(`deploy/`) | 완료 | compose·백업 스크립트·환경 견본 |
+| 4 새 DB 마이그레이션 확인 | 완료 | `sh scripts/verify-fresh-migrations.sh` — 11개 적용, test:db 통과 |
+| 5 클라우드 DB 적용 | **다음** | 준비물 대기(아래) |
+| 6 `.env.cloud`·Auth 설정 | 남음 | 도메인 이름 필요 |
+| 7 태그 `v1.0.0`·이미지 공개 | 남음 | gh 권한(`workflow`, `write:packages`) 준비 완료 |
+| 8 Cloudflare Tunnel | 남음 | Cloudflare에 도메인 추가 완료, 닷네임 네임서버 변경 진행 중 |
+| 9 NAS 설치·실행 | 남음 | 시작 전 NAS의 `docker version`·`docker compose version` 확인(DSM 7.1이면 Compose v1일 수 있음) |
+| 10 확인·문서 | 남음 | 잠긴 아이폰 문자 전송 확인, 백업 복구 시험, `docs/deploy/README.md` 작성 |
+
+**Task 5 시작 전 사용자가 할 일**
+
+1. 자기 터미널 앱(Claude 대화창이 아닌 곳)에서 DB 비밀번호 파일:
+   ```sh
+   mkdir -p ~/.config/nof-ledger && chmod 700 ~/.config/nof-ledger
+   printf '%s' '<Supabase DB 비밀번호>' > ~/.config/nof-ledger/db_password && chmod 600 ~/.config/nof-ledger/db_password
+   ```
+2. 같은 터미널 앱에서 `supabase login`(Claude 대화창의 `!`로는 안 된다: 대화형 터미널이 아님).
+3. 도메인 이름을 Claude에게 알려 준다(저장소에는 쓰지 않음).
+
+## 4. 다른 컴퓨터(집)에서 이어서 하기
+
+### 4.1 개발 환경
+
+```sh
+git clone https://github.com/vipuoow/nof-payments-book.git && cd nof-payments-book
+corepack enable && pnpm install
+git config core.hooksPath .githooks        # 커밋 전 비밀값 검사(gitleaks 필요)
+brew install supabase/tap/supabase gitleaks
+# Docker Desktop 실행 후
+supabase start
+./scripts/write-test-env.sh && cp .env.test.local .env.local
+pnpm exec playwright install webkit
+pnpm test && pnpm test:db && pnpm test:e2e  # 모두 통과하면 준비 끝
 ```
 
-## 3. 지금까지 확인한 내용
+### 4.2 git에 없는 파일 (직접 옮기거나 다시 만든다)
 
-### 3.1 가계부 기능과 문자 처리
+GitHub로 옮기지 않는다. 필요한 컴퓨터에서 다시 만들거나 안전한 방법(직접 복사)으로 옮긴다.
 
-- 국민카드 문자 예시를 확보했습니다.
-- 결제 금액과 문자에 표시되는 누적 사용액을 구분해야 합니다.
-- 후불교통 결제 예정 안내는 일반 결제 승인 문자와 별도로 처리해야 합니다.
-- 이전 작업 기록상 기존 구현에는 문자 분석, 중복 방지, 취소 처리, 수동 입력, 카테고리 수정 기능이 있습니다.
-- 실제 두 사람의 문자로 장기간 안정적으로 작동하는지는 추가 검증이 필요합니다.
-- 현재 브라우저를 여는 단축어 방식은 잠긴 아이폰에서 사용하기 불편하다는 문제가 확인되었습니다.
-- 서버에 직접 전송하는 방식은 제안 단계이며, 실제 아이폰 잠금 상태에서 검증하지 않았습니다.
+| 파일 | 용도 | 없을 때 |
+|---|---|---|
+| `supabase/.env` | 로컬 Google 로그인(OAuth 클라이언트 ID·비밀값) | 로컬에서 Google 로그인 불가. 테스트는 통과 |
+| `~/.config/typesafe/api_key`(600) + `~/.zshenv`의 `TYPESAFE_API_KEY` 줄 | jev 분류 | 분류를 건너뜀(앱은 정상) |
+| `~/.config/nof-ledger/db_password`(600) | 클라우드 DB 비밀번호 | Task 5~ 진행 불가 |
+| `.env.cloud`(600) | 클라우드 접속값(운영자 지정 스크립트 등) | Task 6에서 다시 만든다 |
+| `~/.ssh/nof_nas` | NAS SSH 키(Task 9에서 생성 예정) | 그 컴퓨터에서 새로 만들어 등록 |
 
-### 3.2 NAS에서 직접 확인한 결과
+커밋 전 검사(`.githooks/pre-commit`)는 이 파일들이 있는 컴퓨터에서만 실제 키 값 대조를 한다. 키 파일이 없는 컴퓨터에서는 gitleaks 검사만 한다.
 
-DSM 관리 화면에서 읽기 전용으로 확인했습니다. 공개 저장소이므로 접속 경로·버전 세부·네트워크 설정은 기록하지 않습니다.
+### 4.3 Claude와 이어서 작업할 때 (작업 원칙)
 
-| 항목 | 확인 결과 |
-|---|---|
-| 모델 | Synology DS920+ |
-| DSM | 7.1 계열 |
-| CPU | Intel Celeron J4125, 4코어 |
-| 전체 메모리 | 4GB |
-| 메모리 사용률 | 확인 당시 약 9~13% |
-| 시스템 상태 | 정상 |
-| Docker | 미설치. 공식 패키지 센터에 설치 가능으로 표시 |
-| 외부 접속 구성 | 가계부용 외부 주소는 아직 없음 |
-| 외부 연결 테스트 | 미실행 |
-| 변경 작업 | 설치·설정 변경 없음 |
+Claude Code의 메모리는 컴퓨터마다 따로라 아래 원칙을 새 대화 시작 때 알려 준다(또는 이 문서를 읽게 한다).
 
-가계부 서버와 문자 수신 주소의 외부 접속은 아직 확인되지 않았습니다. 메모리 사용률 역시 확인 시점의 값이며 운영 부하 검증 결과는 아닙니다.
+- 모든 답변은 한국어로.
+- 무엇이든 실행하기 전에 단계별로 승인받는다. 상태 확인(읽기)과 변경을 구분한다. 커밋·push도 승인 후.
+- 키·비밀값 파일을 GitHub에 올리지 않는다. 커밋·push 전 포함 여부를 확인한다(gitleaks는 이름 없이 값만 있는 키를 놓칠 수 있음).
+- 비밀값은 화면·대화에 출력하지 않는다(길이·존재 여부로만 확인).
+- "jev" = TypeSafe(typesafe.ai) API, 키 환경변수는 `TYPESAFE_API_KEY`.
+- 로컬 DB에 `supabase db reset`을 쓰지 않는다(마이그레이션은 `supabase migration up --local`).
+- 계획 진행 방식: superpowers 스킬(설계 → 계획 → 이 대화에서 직접 구현 → 별도 검토자 최종 검토 → 승인 후 커밋).
 
-### 3.3 구성 조사 결과
+## 5. 기존 서비스와 NAS
 
-- DS920+는 컨테이너를 지원하는 모델입니다.
-- 현재 DSM 버전에서는 Docker 패키지를 사용할 수 있으며, 설치 가능 상태를 화면에서 확인했습니다.
-- DSM 업데이트는 이번 단계에 포함하지 않았습니다. 필요할 경우 기존 앱과 백업에 미치는 영향을 먼저 확인합니다.
-- 기존 사이트를 NAS로 옮기려면 서버 실행 방식, 데이터 저장, 인증 연동을 수정해야 합니다.
-- 현재 Sites에서 제공되는 ChatGPT 로그인이 NAS에서도 그대로 작동한다고 보장할 수 없습니다.
-- Supabase 무료 플랜으로 검증을 시작할 수 있으나, 비활성 프로젝트 일시 중지와 백업 조건을 고려해야 합니다. 실제 선택 시 최신 요금을 재확인합니다.
-
-참고 자료:
-
-- [Synology Container Manager 지원 모델](https://www.synology.com/en-in/dsm/packages/ContainerManager)
-- [Synology Container Manager 릴리스 안내](https://www.synology.com/en-us/releaseNote/ContainerManager)
-- [Apple 개인용 자동화 실행 안내](https://support.apple.com/guide/shortcuts/enable-or-disable-a-personal-automation-apd602971e63/ios)
-- [Supabase 요금제](https://supabase.com/pricing)
-- [Supabase 데이터 접근 권한](https://supabase.com/docs/guides/database/postgres/row-level-security)
-- [Cloudflare Tunnel 공식 설명](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/)
-
-## 4. 앞으로 확인해야 할 내용
-
-| 확인 항목 | 확인할 내용 |
-|---|---|
-| 잠긴 아이폰의 문자 전송 | 두 사람의 iOS 버전, 자동화 실행 조건, 잠금 상태에서 서버 전송 성공 여부 |
-| 전송 실패 처리 | 인터넷 단절·NAS 중단 시 누락 확인 및 재등록 방법 |
-| 문자 처리 정확도 | 결제·취소·교통 안내·중복 문자 구분, 사람별 거래 구분 |
-| 로그인 방식 | 기존 ChatGPT 로그인 유지 가능성, 불가능할 때 대안 |
-| 가족 데이터 보호 | 두 사람만 같은 가계부에 접근하도록 권한 설정 |
-| 문자 수신 인증 | 사람별 전송 자격 증명, 등록 전용 권한, 폐기·재발급 방법 |
-| NAS 운영 환경 | 저장 공간, 기존 서비스 충돌, 재시작 후 자동 실행, 백업 상태 |
-| 외부 HTTPS 연결 | 도메인·DDNS 또는 터널 방식, 인증서, 실제 외부 접속 |
-| Git | 저장소 서비스·계정, 비공개 저장소, 배포 승인 방식 |
-| Supabase | 계정·프로젝트, 요금제, 데이터 구조, 백업·복구 방식 |
-| 기존 데이터 이전 | 이전할 데이터 범위, 이전 검증, 기존 사이트 전환 시점 |
-
-## 5. 권장 진행 순서
-
-1. **문자 수집 방식 검증**
-   - 잠긴 아이폰에서 서버로 직접 전송되는지 확인합니다.
-   - 이 결과를 바탕으로 실제 사용할 수 있는 수집 방식을 결정합니다.
-2. **구성 확정**
-   - 로그인, 외부 주소, Git, Supabase, 비용을 정합니다.
-3. **NAS 준비**
-   - 승인 후 Docker 설치와 실행 환경을 구성합니다.
-4. **가계부 이전·연동**
-   - NAS와 Supabase에 맞게 기존 코드를 수정합니다.
-5. **부부 공동 사용 테스트**
-   - 실제 결제·취소·중복·전송 실패와 가족 합산 금액을 확인합니다.
-6. **운영 전환**
-   - 백업·복구를 확인하고 기존 사이트에서 새 서비스로 전환합니다.
-
-## 6. 승인 및 작업 원칙
-
-- 각 단계의 작업 범위와 변경 내용을 먼저 설명합니다.
-- 사용자가 승인한 단계만 진행합니다.
-- 상태 확인과 실제 설정 변경을 구분합니다.
-- 설치·배포·로그인 방식 변경·외부 공개는 해당 범위를 승인받은 후 진행합니다.
-- 비밀번호 등 인증정보는 문서나 대화에 기록하지 않습니다.
-
-**현재 완료된 단계:** 구성 조사 및 NAS의 읽기 전용 환경 확인.
-
-**현재 미진행 작업:** Docker 설치, NAS 설정 변경, 가계부 NAS 배포, Git·Supabase 연동, 잠긴 아이폰의 직접 전송 검증.
+- 기존 서비스(Sites)는 새 서비스가 확인될 때까지 유지하고, 종료 시점은 나중에 정한다.
+- NAS: Synology DS920+, DSM 7.1 계열, Intel J4125(amd64), 메모리 4GB. Docker(Container Manager) 미설치, 외부 주소 없음(2026-10-01 읽기 전용 확인).
