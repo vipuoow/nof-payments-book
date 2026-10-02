@@ -1,3 +1,5 @@
+import { after } from "next/server";
+import { createTypesafeClassifier } from "@/categorize/typesafe";
 import { handleIngest } from "@/ingest/handler";
 import { createRateLimiter } from "@/ingest/rate-limit";
 import { createAdminClient } from "@/lib/supabase-admin";
@@ -9,5 +11,13 @@ const tokenLimiter = createRateLimiter({ limit: 30, windowMs: 60_000 });
 const ipLimiter = createRateLimiter({ limit: 120, windowMs: 60_000 });
 
 export async function POST(req: Request): Promise<Response> {
-  return handleIngest(req, { db: createAdminClient(), tokenLimiter, ipLimiter, now: () => new Date() });
+  const typesafeKey = process.env.TYPESAFE_API_KEY;
+  return handleIngest(req, {
+    db: createAdminClient(),
+    tokenLimiter,
+    ipLimiter,
+    now: () => new Date(),
+    classify: typesafeKey ? createTypesafeClassifier({ apiKey: typesafeKey }) : null,
+    afterResponse: after,
+  });
 }

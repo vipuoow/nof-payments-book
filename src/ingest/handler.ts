@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { categorizeTransaction } from "@/categorize/categorize";
+import type { CategoryClassifier } from "@/categorize/typesafe";
 import { resolveIngestToken } from "./auth";
 import type { RateLimiter } from "./rate-limit";
 import { ingestMessage } from "./service";
@@ -17,6 +19,10 @@ export type IngestDeps = {
   /** 토큰 확인(DB 조회) 전에 거는 IP별 제한 */
   ipLimiter: RateLimiter;
   now: () => Date;
+  /** 카테고리 자동 분류기. 없으면(키 미설정) 분류하지 않는다. */
+  classify?: CategoryClassifier | null;
+  /** 응답을 보낸 뒤 실행할 작업을 예약한다(라우트에서는 Next.js after). */
+  afterResponse?: (task: () => Promise<void>) => void;
 };
 
 const json = (status: number, payload: unknown) => Response.json(payload, { status });
@@ -55,5 +61,17 @@ export async function handleIngest(req: Request, deps: IngestDeps): Promise<Resp
     receivedAt: receivedAt ? new Date(receivedAt) : deps.now(),
     source,
   });
+
+  const { classify, afterResponse } = deps;
+  const transactionId = result.transactionId;
+  if (transactionId && classify && afterResponse) {
+    afterResponse(async () => {
+      try {
+        await categorizeTransaction(deps.db, classify, transactionId);
+      } catch (e) {
+        console.warn(`[categorize] 거래 ${transactionId} 분류 실패: ${(e as Error).message}`);
+      }
+    });
+  }
   return json(200, result);
 }

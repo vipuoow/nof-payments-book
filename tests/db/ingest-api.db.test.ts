@@ -1,4 +1,5 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import type { CategoryClassifier } from "@/categorize/typesafe";
 import { APPROVAL } from "@/parsers/__fixtures__/kb-card";
 import { handleIngest, type IngestDeps } from "@/ingest/handler";
 import { createRateLimiter } from "@/ingest/rate-limit";
@@ -82,5 +83,55 @@ describe("POST /api/ingest", () => {
     expect((await handleIngest(req(), d)).status).toBe(200);
     expect((await handleIngest(req(), d)).status).toBe(200);
     expect((await handleIngest(req(), d)).status).toBe(429);
+  });
+});
+
+describe("응답 후 자동 분류", () => {
+  async function setup(label: string, classify: CategoryClassifier | null) {
+    const group = await createGroupFixture(label);
+    const t = await issueIngestToken(group.owner.userId);
+    const tasks: Array<() => Promise<void>> = [];
+    const d: IngestDeps = { ...deps(), classify, afterResponse: (task) => { tasks.push(task); } };
+    return { group, t, tasks, d };
+  }
+
+  async function categoryOf(groupId: string) {
+    const { data } = await adminClient().from("transactions")
+      .select("category_id, category_source").eq("group_id", groupId).single();
+    return data;
+  }
+
+  it("응답은 분류를 기다리지 않고, 예약된 작업이 카테고리를 채운다", async () => {
+    const classify = vi.fn<CategoryClassifier>(async () => ({ name: "카페", confidence: 0.98 }));
+    const { group, t, tasks, d } = await setup("auto-ok", classify);
+
+    const res = await handleIngest(post({ body: APPROVAL, source: "manual_test" }, t), d);
+    expect(res.status).toBe(200);
+    expect(classify).not.toHaveBeenCalled();
+    expect(tasks).toHaveLength(1);
+
+    await tasks[0]();
+    expect(await categoryOf(group.groupId)).toMatchObject({ category_source: "ai" });
+  });
+
+  it("같은 문자가 다시 오면(duplicate) 분류를 예약하지 않는다", async () => {
+    const { t, tasks, d } = await setup("auto-dup", async () => ({ name: "카페", confidence: 0.98 }));
+    await handleIngest(post({ body: APPROVAL, source: "manual_test" }, t), d);
+    const again = await handleIngest(post({ body: APPROVAL, source: "manual_test" }, t), d);
+    expect(await again.json()).toEqual({ status: "duplicate" });
+    expect(tasks).toHaveLength(1);
+  });
+
+  it("키가 없으면(classify 없음) 예약하지 않는다", async () => {
+    const { t, tasks, d } = await setup("auto-nokey", null);
+    await handleIngest(post({ body: APPROVAL, source: "manual_test" }, t), d);
+    expect(tasks).toHaveLength(0);
+  });
+
+  it("분류 중 예외가 나도 작업은 실패하지 않고 거래는 미지정으로 남는다", async () => {
+    const { group, t, tasks, d } = await setup("auto-throw", async () => { throw new Error("boom"); });
+    await handleIngest(post({ body: APPROVAL, source: "manual_test" }, t), d);
+    await expect(tasks[0]()).resolves.toBeUndefined();
+    expect(await categoryOf(group.groupId)).toEqual({ category_id: null, category_source: null });
   });
 });
