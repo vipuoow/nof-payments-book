@@ -89,7 +89,7 @@
 | `group_members` | `group_id`, `user_id`, `role`(owner/member) | `user_id` unique (한 사람 한 그룹) |
 | `group_invites` | `group_id`, `token_hash`, `created_by`, `expires_at`, `used_by`, `revoked_at` | 그룹장만 발급 |
 | `ingest_tokens` | `user_id`, `token_hash`, `label`, `last_used_at`, `revoked_at` | 원문 토큰은 발급 시 한 번만 표시 |
-| `raw_messages` | `group_id`, `user_id`, `body`(마스킹), `body_hash`, `source`, `received_at`, `status`, `parser_id` | `status`: parsed / unparsed / ignored / duplicate |
+| `raw_messages` | `group_id`, `user_id`, `body`(마스킹), `body_hash`, `source`, `received_at`, `status`, `parser_id` | `status`: parsed / unparsed / ignored. `duplicate`는 저장하지 않고 ingest API 응답에만 쓴다 |
 | `transactions` | `group_id`, `user_id`, `raw_message_id`, `kind`(approval/cancel/manual), `amount`, `merchant`, `occurred_at`, `issuer`, `category_id`, `category_source`(rule/ai/user), `cancels_transaction_id`, `memo` | 취소는 음수 금액. `category_source`는 카테고리를 정한 주체 |
 | `categories` | `group_id`(null이면 기본), `name`, `sort_order` | |
 | `merchant_rules` | `group_id`, `merchant_pattern`, `category_id` | 카테고리 수정 시 학습 |
