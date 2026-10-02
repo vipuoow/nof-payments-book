@@ -1,0 +1,53 @@
+name: image
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "빌드할 태그 (되돌릴 때 이전 태그)"
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: image
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - id: meta
+        # 입력값을 셸에 직접 끼워 넣지 않고 환경 변수로 넘긴다
+        env:
+          TAG: ${{ inputs.ref || github.ref_name }}
+        run: |
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+            GIT_SHA=${{ steps.meta.outputs.sha }}
+          tags: |
+            ghcr.io/vipuoow/nof-payments-book:${{ steps.meta.outputs.tag }}
+            ghcr.io/vipuoow/nof-payments-book:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
