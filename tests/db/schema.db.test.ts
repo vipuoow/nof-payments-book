@@ -16,6 +16,7 @@ describe("초기 스키마", () => {
       invite_ttl_days: 7,
       raw_message_retention_days: 365,
       budget_warning_ratio: 0.8,
+      category_ai_min_confidence: 0.7,
     });
   });
 
