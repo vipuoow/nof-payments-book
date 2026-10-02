@@ -5,9 +5,9 @@ import { randomToken, sha256Hex } from "@/lib/hash";
 const url = process.env.SUPABASE_URL!;
 const anonKey = process.env.SUPABASE_ANON_KEY!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const PASSWORD = "test-password-1234";
+export const PASSWORD = "test-password-1234";
 
-export type TestUser = { userId: string; client: SupabaseClient };
+export type TestUser = { userId: string; client: SupabaseClient; email: string };
 export type GroupFixture = { groupId: string; owner: TestUser; member: TestUser };
 
 export function adminClient(): SupabaseClient {
@@ -37,7 +37,7 @@ export async function createLoneUser(label: string): Promise<TestUser> {
   const client = anonClient();
   const { error: signInError } = await client.auth.signInWithPassword({ email, password: PASSWORD });
   if (signInError) throw signInError;
-  return { userId, client };
+  return { userId, client, email };
 }
 
 export async function createGroupFixture(label: string): Promise<GroupFixture> {

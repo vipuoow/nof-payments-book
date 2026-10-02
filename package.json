@@ -10,7 +10,8 @@
     "test": "vitest run src",
     "test:db": "vitest run tests/db --no-file-parallelism",
     "secrets:scan": "gitleaks git --redact .",
-    "operator:grant": "node --env-file=.env.local scripts/grant-operator.ts"
+    "operator:grant": "node --env-file=.env.local scripts/grant-operator.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -22,6 +23,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
