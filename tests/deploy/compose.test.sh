@@ -10,4 +10,8 @@ docker compose -f deploy/compose.yaml config --format json | node -e '
   if (JSON.stringify(on) !== JSON.stringify(["app"])) { console.error("FAIL watchtower 대상", on); process.exit(1); }
   console.log("PASS watchtower 대상: app");
   if (c.services.backup.init !== true) { console.error("FAIL backup에 init 없음"); process.exit(1); }
-  console.log("PASS backup init");'
+  console.log("PASS backup init");
+  const cmd = c.services.cloudflared.command || [];
+  const i = cmd.indexOf("--url");
+  if (i < 0 || cmd[i + 1] !== "http://app:3000") { console.error("FAIL cloudflared 연결 대상", cmd); process.exit(1); }
+  console.log("PASS cloudflared → app:3000");'

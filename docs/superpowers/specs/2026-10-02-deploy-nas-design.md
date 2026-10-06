@@ -47,7 +47,7 @@ Container Manager 프로젝트(docker compose) 하나. 폴더(예: `/volume1/doc
 | 서비스 | 이미지 | 역할 |
 |---|---|---|
 | `app` | `ghcr.io/vipuoow/nof-payments-book:latest` | 가계부. 외부 포트 없음. 재시작 정책 `unless-stopped` |
-| `cloudflared` | `cloudflare/cloudflared` | `tunnel run --token`으로 Tunnel 연결. 공개 주소 `ledger.<도메인>` → `http://app:3000` |
+| `cloudflared` | `cloudflare/cloudflared` | `tunnel run --url http://app:3000`(토큰은 `TUNNEL_TOKEN`)으로 Tunnel 연결. 터널은 이 Mac의 `cloudflared`로 만든 로컬 관리 터널(2026-10-06 변경: 브라우저 조작 대신 공식 프로그램 사용) |
 | `watchtower` | `nickfedor/watchtower`(원본 `containrrr/watchtower`는 보관 상태라 관리되는 후속 이미지 사용) | 라벨이 붙은 `app`만 감시, 새 이미지면 받아서 다시 시작, 이전 이미지 정리 |
 | `backup` | `postgres:17-alpine` | 매일 새벽(KST 04:00) `pg_dump -Fc`로 `backups/ledger-YYYY-MM-DD.dump` 저장, 30일 지난 파일 삭제 |
 

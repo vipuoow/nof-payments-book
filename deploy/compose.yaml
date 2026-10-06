@@ -17,7 +17,8 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    command: tunnel --no-autoupdate run
+    # 이 Mac에서 만든(로컬 관리) 터널이라 연결 대상을 여기서 지정한다. 토큰은 .env의 TUNNEL_TOKEN.
+    command: tunnel --no-autoupdate run --url http://app:3000
     environment:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN:?}
     depends_on: [app]
