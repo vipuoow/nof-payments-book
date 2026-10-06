@@ -1,6 +1,6 @@
 # 가족 가계부 진행 현황 (이어서 작업하기)
 
-최종 갱신: 2026-10-06
+최종 갱신: 2026-10-06 (Task 9 완료)
 
 공개 저장소이므로 도메인·사이트 주소·NAS 접속 정보·네트워크 설정·비밀값은 이 문서에 쓰지 않는다. 주소는 `ledger.<도메인>`, NAS 폴더는 `<NAS 폴더>`로 쓴다.
 
@@ -9,8 +9,8 @@
 | 구분 | 상태 |
 |---|---|
 | 앱 기능 | **완료**: 문자 수신·분석, Google 로그인·초대, jev 자동 분류, 홈·거래 시트·직접 입력·미분류 문자, 예산·카테고리 관리·기기 연결 안내 |
-| 배포(계획 4) | **진행 중**: Task 1~8 완료, NAS 설치(Task 9)·확인(Task 10) 남음 |
-| 다음 할 일 | 계획 4 Task 9(NAS 설치·실행). NAS와 같은 네트워크(집)에서 진행 |
+| 배포(계획 4) | **진행 중**: Task 1~9 완료(NAS에서 서비스 실행 중, 외부 주소 응답 확인), 확인·문서(Task 10) 남음 |
+| 다음 할 일 | 계획 4 Task 10. 아래 "Task 10 할 일"과 4.3 "NAS 원격 관리" 참고 |
 
 ## 2. 완료한 계획
 
@@ -42,13 +42,37 @@
 | 6 `.env.cloud`·Auth 설정 | 완료 | 사이트 주소 `https://ledger.<도메인>`, 이메일 로그인 끔, Google 켬 |
 | 7 태그 `v1.0.0`·이미지 공개 | 완료 | GHCR 공개, amd64 확인 |
 | 8 Cloudflare Tunnel | 완료 | 터널 `nof-ledger`(작업한 Mac의 `cloudflared`로 생성), `ledger.<도메인>` 연결 |
-| 9 NAS 설치·실행 | **다음** | 시작 전 NAS의 `docker version`·`docker compose version` 확인(DSM 7.1이면 Compose v1일 수 있음) |
-| 10 확인·문서 | 남음 | 잠긴 아이폰 문자 전송 확인, 백업 복구 시험, `docs/deploy/README.md` 작성 |
+| 9 NAS 설치·실행 | 완료 | 2026-10-06. app·cloudflared·watchtower·backup 4개 실행, `https://ledger.<도메인>/api/health` 응답, 첫 백업 파일 생성 |
+| 10 확인·문서 | **다음** | 아래 "Task 10 할 일" |
 
-**Task 9 메모**
+**Task 9에서 알게 된 것(NAS 환경)**
 
-- 터널 연결 열쇠(`TUNNEL_TOKEN`)는 작업한 Mac에서 `cloudflared tunnel token nof-ledger`로 꺼내 NAS `.env`에 바로 넣는다(화면 출력 금지). 다른 컴퓨터에서 하려면 그 컴퓨터에서 `cloudflared tunnel login` 후 같은 명령을 쓴다.
-- DB 비밀번호 파일(`~/.config/nof-ledger/db_password`)과 `.env.cloud`는 작업한 Mac에만 있다(4.2).
+- NAS는 회사에 있고 Tailscale로 원격 관리한다. SSH는 관리용 일반 계정 + 키 로그인, `sudo` 비밀번호 없이 쓸 수 있는 것은 `docker`·`docker-compose` 두 개뿐이다(sudoers 규칙).
+- DSM 7.1.1의 Docker 패키지는 Docker 20.10.3, **docker-compose 1.28.5**다. 그래서
+  - `compose.yaml`의 최상위 `name:`을 빼고 묶음 이름은 `.env`의 `COMPOSE_PROJECT_NAME=nof-ledger`로 정한다.
+  - 1.x는 `compose.yaml`을 자동으로 찾지 못하므로 항상 `docker-compose -f compose.yaml ...`로 실행한다.
+  - `docker-compose run`은 sudo 환경에서 `docker` 경로를 못 찾아 실패한다. 한 번 실행은 `docker exec`를 쓴다.
+- NAS의 SFTP가 꺼져 있어 `scp`가 실패한다. 파일은 `ssh <NAS> "cat > <NAS 폴더>/파일" < 파일`로 올린다.
+- NAS `.env`(600)가 운영값의 기준이다(Supabase 주소·서비스 키, 사이트 주소, jev 키, 터널 열쇠, 백업 DB 주소). Mac의 `.env.cloud`·DB 비밀번호 파일은 Task 10까지만 쓰고 정리한다.
+- NAS에 Hyper Backup이 설치돼 있지 않다. 백업 파일은 NAS `<NAS 폴더>/backups`에만 있다(필요하면 Hyper Backup으로 다른 곳에 사본을 둔다).
+
+**자주 쓰는 운영 명령(NAS에서, `<NAS 폴더>` 안)**
+
+```sh
+sudo docker-compose -f compose.yaml ps                       # 상태
+sudo docker-compose -f compose.yaml logs --tail 50 app       # 앱 기록
+sudo docker-compose -f compose.yaml pull && sudo docker-compose -f compose.yaml up -d   # 수동 갱신
+sudo docker exec -e RUN_ONCE=1 nof-ledger_backup_1 sh /backup.sh                       # 지금 백업
+```
+
+**Task 10 할 일**
+
+1. 아이폰에서 `https://ledger.<도메인>` Google 로그인 → 운영자 지정(`node --env-file=.env.cloud scripts/grant-operator.ts <이메일> <이름>`) → 그룹 만들기·배우자 초대
+2. 기기 연결 안내대로 두 아이폰에 단축어 설정 → **잠긴 상태에서** 카드 문자가 들어오는지 확인
+3. 홈 화면에 추가(PWA), 거래 수정·직접 입력이 실제 주소에서 되는지 확인
+4. 자동 갱신 확인: 작은 변경으로 `v1.0.1` 태그 → 5분 안에 `/api/health`의 version이 바뀌는지
+5. 다음 날 04:00 백업 파일 생성 확인, 백업 복구 시험(로컬 DB에 `pg_restore`)
+6. `docs/deploy/README.md` 작성(설치·갱신·되돌리기: 옛 태그를 수동 실행하면 `:latest`가 그 판으로 옮겨지고, 다음 태그에서 다시 앞으로 간다), Mac 임시 사본 정리, 이 문서 갱신
 
 ## 4. 다른 컴퓨터(집)에서 이어서 하기
 
@@ -76,11 +100,19 @@ GitHub로 옮기지 않는다. 필요한 컴퓨터에서 다시 만들거나 안
 | `~/.config/typesafe/api_key`(600) + `~/.zshenv`의 `TYPESAFE_API_KEY` 줄 | jev 분류 | 분류를 건너뜀(앱은 정상) |
 | `~/.config/nof-ledger/db_password`(600) | 클라우드 DB 비밀번호 | Task 5~ 진행 불가 |
 | `.env.cloud`(600) | 클라우드 접속값(운영자 지정 스크립트 등) | Task 6에서 다시 만든다 |
-| `~/.ssh/nof_nas` | NAS SSH 키(Task 9에서 생성 예정) | 그 컴퓨터에서 새로 만들어 등록 |
+| `~/.ssh/nof_nas` + `~/.ssh/config`의 NAS 항목 | NAS SSH 키 로그인 | 4.3대로 그 컴퓨터에서 새 키를 만들어 등록 |
 
 커밋 전 검사(`.githooks/pre-commit`)는 이 파일들이 있는 컴퓨터에서만 실제 키 값 대조를 한다. 키 파일이 없는 컴퓨터에서는 gitleaks 검사만 한다.
 
-### 4.3 Claude와 이어서 작업할 때 (작업 원칙)
+### 4.3 NAS 원격 관리(다른 컴퓨터에서)
+
+1. 그 컴퓨터에 Tailscale을 설치하고 같은 계정으로 로그인한다(관리 화면에서 NAS가 보이는지 확인, NAS는 키 만료 끔).
+2. 새 SSH 키를 만든다: `ssh-keygen -t ed25519 -f ~/.ssh/nof_nas -N ""`
+3. 공개키를 NAS 관리용 계정의 `~/.ssh/authorized_keys`에 추가한다(처음 한 번은 그 계정 비밀번호로 `ssh-copy-id -i ~/.ssh/nof_nas.pub <계정>@<NAS Tailscale 주소>`).
+4. `~/.ssh/config`에 `Host nof-nas`(HostName = NAS Tailscale 주소, User, IdentityFile ~/.ssh/nof_nas, IdentitiesOnly yes)를 넣고 `ssh nof-nas`로 확인한다.
+5. 운영값이 필요하면 NAS `.env`를 기준으로 쓴다(화면에 출력하지 말 것). 예: 운영자 지정 스크립트용 값은 NAS `.env`의 `SUPABASE_URL`·`SUPABASE_SERVICE_ROLE_KEY`.
+
+### 4.4 Claude와 이어서 작업할 때 (작업 원칙)
 
 Claude Code의 메모리는 컴퓨터마다 따로라 아래 원칙을 새 대화 시작 때 알려 준다(또는 이 문서를 읽게 한다).
 

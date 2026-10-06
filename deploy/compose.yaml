@@ -1,5 +1,5 @@
-# NAS Container Manager 프로젝트 "nof-ledger". 같은 폴더의 .env(권한 600)를 쓴다.
-name: nof-ledger
+# NAS 프로젝트 "nof-ledger". 같은 폴더의 .env(권한 600)를 쓴다.
+# 묶음 이름은 .env의 COMPOSE_PROJECT_NAME으로 정한다(NAS의 docker-compose 1.x는 최상위 name: 키를 모른다).
 
 services:
   app:
