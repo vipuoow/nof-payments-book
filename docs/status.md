@@ -1,6 +1,6 @@
 # 가족 가계부 진행 현황 (이어서 작업하기)
 
-최종 갱신: 2026-10-02
+최종 갱신: 2026-10-06
 
 공개 저장소이므로 도메인·사이트 주소·NAS 접속 정보·네트워크 설정·비밀값은 이 문서에 쓰지 않는다. 주소는 `ledger.<도메인>`, NAS 폴더는 `<NAS 폴더>`로 쓴다.
 
@@ -9,8 +9,8 @@
 | 구분 | 상태 |
 |---|---|
 | 앱 기능 | **완료**: 문자 수신·분석, Google 로그인·초대, jev 자동 분류, 홈·거래 시트·직접 입력·미분류 문자, 예산·카테고리 관리·기기 연결 안내 |
-| 배포(계획 4) | **진행 중**: 저장소 작업(Task 1~4) 완료, 운영 작업(Task 5~10) 남음 |
-| 다음 할 일 | 계획 4 Task 5(클라우드 DB 적용) 준비 → 4장 |
+| 배포(계획 4) | **진행 중**: Task 1~8 완료, NAS 설치(Task 9)·확인(Task 10) 남음 |
+| 다음 할 일 | 계획 4 Task 9(NAS 설치·실행). NAS와 같은 네트워크(집)에서 진행 |
 
 ## 2. 완료한 계획
 
@@ -38,22 +38,17 @@
 | 2 GitHub Actions 이미지 빌드 | 완료 | 태그를 붙여야 실행된다(아직 태그 없음) |
 | 3 NAS 묶음(`deploy/`) | 완료 | compose·백업 스크립트·환경 견본 |
 | 4 새 DB 마이그레이션 확인 | 완료 | `sh scripts/verify-fresh-migrations.sh` — 11개 적용, test:db 통과 |
-| 5 클라우드 DB 적용 | **다음** | 준비물 대기(아래) |
-| 6 `.env.cloud`·Auth 설정 | 남음 | 도메인 이름 필요 |
-| 7 태그 `v1.0.0`·이미지 공개 | 남음 | gh 권한(`workflow`, `write:packages`) 준비 완료 |
-| 8 Cloudflare Tunnel | 남음 | Cloudflare에 도메인 추가 완료, 닷네임 네임서버 변경 진행 중 |
-| 9 NAS 설치·실행 | 남음 | 시작 전 NAS의 `docker version`·`docker compose version` 확인(DSM 7.1이면 Compose v1일 수 있음) |
+| 5 클라우드 DB 적용 | 완료 | 2026-10-06, 마이그레이션 11개 적용, 적용 전 백업은 작업한 Mac에 보관 |
+| 6 `.env.cloud`·Auth 설정 | 완료 | 사이트 주소 `https://ledger.<도메인>`, 이메일 로그인 끔, Google 켬 |
+| 7 태그 `v1.0.0`·이미지 공개 | 완료 | GHCR 공개, amd64 확인 |
+| 8 Cloudflare Tunnel | 완료 | 터널 `nof-ledger`(작업한 Mac의 `cloudflared`로 생성), `ledger.<도메인>` 연결 |
+| 9 NAS 설치·실행 | **다음** | 시작 전 NAS의 `docker version`·`docker compose version` 확인(DSM 7.1이면 Compose v1일 수 있음) |
 | 10 확인·문서 | 남음 | 잠긴 아이폰 문자 전송 확인, 백업 복구 시험, `docs/deploy/README.md` 작성 |
 
-**Task 5 시작 전 사용자가 할 일**
+**Task 9 메모**
 
-1. 자기 터미널 앱(Claude 대화창이 아닌 곳)에서 DB 비밀번호 파일:
-   ```sh
-   mkdir -p ~/.config/nof-ledger && chmod 700 ~/.config/nof-ledger
-   printf '%s' '<Supabase DB 비밀번호>' > ~/.config/nof-ledger/db_password && chmod 600 ~/.config/nof-ledger/db_password
-   ```
-2. 같은 터미널 앱에서 `supabase login`(Claude 대화창의 `!`로는 안 된다: 대화형 터미널이 아님).
-3. 도메인 이름을 Claude에게 알려 준다(저장소에는 쓰지 않음).
+- 터널 연결 열쇠(`TUNNEL_TOKEN`)는 작업한 Mac에서 `cloudflared tunnel token nof-ledger`로 꺼내 NAS `.env`에 바로 넣는다(화면 출력 금지). 다른 컴퓨터에서 하려면 그 컴퓨터에서 `cloudflared tunnel login` 후 같은 명령을 쓴다.
+- DB 비밀번호 파일(`~/.config/nof-ledger/db_password`)과 `.env.cloud`는 작업한 Mac에만 있다(4.2).
 
 ## 4. 다른 컴퓨터(집)에서 이어서 하기
 
