@@ -2,9 +2,9 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "가계부",
-  description: "부부·커플이 함께 쓰는 결제 문자 가계부",
-  appleWebApp: { capable: true, title: "가계부", statusBarStyle: "default" },
+  title: "같이가계부",
+  description: "카드만 써, 기록은 내가 할게",
+  appleWebApp: { capable: true, title: "같이가계부", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
@@ -12,8 +12,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f4f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#101013" },
   ],
 };
 
