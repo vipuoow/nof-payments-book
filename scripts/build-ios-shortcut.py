@@ -2,7 +2,8 @@
 """아이폰 단축어 '가계부로 보내기'를 만들고 서명한다(macOS 전용, 단축어 앱 로그인 필요).
 
 단축어 동작:
-  0. 텍스트 = 연결 코드 (추가할 때 묻는다: "<받는 주소> <토큰>")
+  0. 텍스트 = 연결 코드("<받는 주소> <토큰>"). 추가한 뒤 사용자가 이 칸의 자리 글자를 지우고 붙여넣는다.
+     (추가 화면에서 묻는 방식은 아이폰에서 [단축어 추가]가 눌리지 않아 쓰지 않는다)
   1. 연결 코드를 공백으로 나눔 → 2. 첫 항목 = 주소, 3. 마지막 항목 = 토큰
   4. 단축어 입력(문자)에서 텍스트를 꺼냄
   5. 주소로 POST, Authorization: Bearer <토큰>, JSON {body: 문자 내용, source: ios_shortcut}
@@ -20,7 +21,8 @@ import tempfile
 import uuid
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "public", "shortcuts", "가계부로 보내기.shortcut")
-OBJ = "￼"  # 변수 자리 표시 문자
+OBJ = "\ufffc"  # 변수 자리 표시 문자
+PLACEHOLDER = "여기에연결코드붙여넣기"  # 공백이 없어야 한다(단축어가 공백으로 주소와 토큰을 나눈다)
 
 
 def uid() -> str:
@@ -64,7 +66,7 @@ def action(identifier: str, params: dict) -> dict:
 def build() -> dict:
     code, split, url, token, message = uid(), uid(), uid(), uid(), uid()
     actions = [
-        action("is.workflow.actions.gettext", {"UUID": code, "WFTextActionText": ""}),
+        action("is.workflow.actions.gettext", {"UUID": code, "WFTextActionText": PLACEHOLDER}),
         action("is.workflow.actions.text.split", {
             "UUID": split,
             "text": attachment(output(code, "텍스트")),
@@ -104,13 +106,7 @@ def build() -> dict:
         "WFWorkflowMinimumClientVersionString": "900",
         "WFWorkflowHasShortcutInputVariables": True,
         "WFWorkflowIcon": {"WFWorkflowIconStartColor": 4292093695, "WFWorkflowIconGlyphNumber": 59511},
-        "WFWorkflowImportQuestions": [{
-            "ActionIndex": 0,
-            "Category": "Parameter",
-            "DefaultValue": "",
-            "ParameterKey": "WFTextActionText",
-            "Text": "가계부 '내 기기 연결' 화면에서 복사한 연결 코드를 붙여넣으세요.",
-        }],
+        "WFWorkflowImportQuestions": [],
         "WFWorkflowInputContentItemClasses": [
             "WFStringContentItem",
             "WFGenericFileContentItem",
