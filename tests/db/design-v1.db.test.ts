@@ -141,14 +141,26 @@ describe("처음 홈 상태", () => {
     expect(s).toMatchObject({ anyConnected: true, connectedName: "아내", meConnected: false, memberCount: 2, pendingInvite: null });
   });
 
-  it("폐기한 기기는 연결로 치지 않는다", async () => {
+  it("휴대폰을 바꾸느라 옛 연결 코드를 폐기해도 가계부는 연결된 것으로 본다(내 휴대폰만 연결 전)", async () => {
     const owner = await serviceMember("dv1-revoked");
     expectOk(await createGroup(owner.client, "남편"));
     await issueIngestToken(owner.userId);
     await admin.from("ingest_tokens")
       .update({ last_used_at: new Date().toISOString(), revoked_at: new Date().toISOString() })
       .eq("user_id", owner.userId);
-    expect((await loadSetup(owner.client)).anyConnected).toBe(false);
+    const s = await loadSetup(owner.client);
+    expect(s.anyConnected).toBe(true);
+    expect(s.meConnected).toBe(false);
+  });
+
+  it("직접 입력만 쓰는 가계부도 거래가 있으면 처음 연결 단계에 갇히지 않는다", async () => {
+    const owner = await serviceMember("dv1-manual");
+    const groupId = expectOk(await createGroup(owner.client, "남편"));
+    await admin.from("transactions").insert({
+      group_id: groupId, user_id: owner.userId, kind: "manual", amount: 5000, merchant: "직접",
+      occurred_at: new Date().toISOString(),
+    });
+    expect((await loadSetup(owner.client)).anyConnected).toBe(true);
   });
 
   it("만료된 초대는 expired로 알려 준다", async () => {

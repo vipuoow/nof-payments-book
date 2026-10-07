@@ -164,7 +164,9 @@ end
 $$;
 
 -- 처음 홈 상태: 파트너의 기기 연결 여부도 봐야 해서(RLS는 자기 기기만) 보안 정의 함수로 요약만 돌려준다.
--- 연결됨 = 폐기되지 않은 연결 코드로 문자(또는 연결 시험)가 한 번이라도 도착함
+-- 가계부 연결됨(any) = 구성원 누구든 문자가 한 번이라도 도착한 적이 있거나(휴대폰을 바꾸느라 폐기한 코드 포함), 거래가 있음.
+--   한 번 쓰기 시작한 가계부가 처음 연결 단계에 다시 갇히지 않게 한다.
+-- 내 휴대폰 연결됨(me) = 지금 쓰는 연결 코드(폐기 안 됨)로 문자가 도착함. 아니면 홈 위에 "연결 전" 알림.
 create function public.group_setup_status() returns jsonb
 language plpgsql stable security definer set search_path = public
 as $$
@@ -183,7 +185,8 @@ begin
   return jsonb_build_object(
     'any_connected', exists (
       select 1 from public.ingest_tokens t join public.group_members m on m.user_id = t.user_id
-      where m.group_id = v_group and t.revoked_at is null and t.last_used_at is not null),
+      where m.group_id = v_group and t.last_used_at is not null)
+      or exists (select 1 from public.transactions x where x.group_id = v_group),
     'connected_name', (
       select p.display_name from public.ingest_tokens t
       join public.group_members m on m.user_id = t.user_id

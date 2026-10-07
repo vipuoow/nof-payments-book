@@ -78,6 +78,17 @@ test("한도 화면은 지난 달을 고를 수 없고, 잘못된 값은 이유�
   await expect(page.getByText("지난 달 한도는 바뀌지 않아요.")).toBeVisible();
   await expect(page.getByRole("radio")).toHaveCount(2);
   await page.getByLabel("새 한도", { exact: true }).fill("abc");
+  await page.getByLabel(/다음 달부터/).check();
   await page.getByRole("button", { name: "저장하기" }).click();
   await expect(page.getByRole("alert")).toBeVisible();
+  // 오류 뒤에도 고른 적용 달과 입력값이 그대로 남는다(그대로 고쳐 저장하면 의도한 달에 저장)
+  await expect(page.getByLabel(/다음 달부터/)).toBeChecked();
+  await expect(page.getByLabel(/이번 달부터/)).not.toBeChecked();
+  await expect(page.getByLabel("새 한도", { exact: true })).toHaveValue("abc");
+  // 금액만 고쳐 다시 저장하면 다음 달에 저장된다
+  await page.getByLabel("새 한도", { exact: true }).fill("3,000,000");
+  await page.getByRole("button", { name: "저장하기" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  const { data } = await db.from("budgets").select("month").eq("group_id", g.groupId).is("category_id", null);
+  expect(data).toEqual([{ month: budgetMonth(shiftMonth(kstMonthOf(new Date()), 1)) }]);
 });
