@@ -65,6 +65,11 @@ export function kstLocalValue(d: Date): string {
   return kst(d).toISOString().slice(0, 16);
 }
 
+/** 결제 시각 표시용 KST "시:분"(24시간) */
+export function kstTime(d: Date): string {
+  return kst(d).toISOString().slice(11, 16);
+}
+
 export function parseKstLocal(value: string): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
   if (!m) return null;

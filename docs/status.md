@@ -1,6 +1,6 @@
 # 가족 가계부 진행 현황 (이어서 작업하기)
 
-최종 갱신: 2026-10-06 (Task 9 완료)
+최종 갱신: 2026-10-07 (계획 4 완료)
 
 공개 저장소이므로 도메인·사이트 주소·NAS 접속 정보·네트워크 설정·비밀값은 이 문서에 쓰지 않는다. 주소는 `ledger.<도메인>`, NAS 폴더는 `<NAS 폴더>`로 쓴다.
 
@@ -9,8 +9,8 @@
 | 구분 | 상태 |
 |---|---|
 | 앱 기능 | **완료**: 문자 수신·분석, Google 로그인·초대, jev 자동 분류, 홈·거래 시트·직접 입력·미분류 문자, 예산·카테고리 관리·기기 연결 안내 |
-| 배포(계획 4) | **진행 중**: Task 1~9 완료(NAS에서 서비스 실행 중, 외부 주소 응답 확인), 확인·문서(Task 10) 남음 |
-| 다음 할 일 | 계획 4 Task 10. 아래 "Task 10 할 일"과 4.3 "NAS 원격 관리" 참고 |
+| 배포(계획 4) | **완료**: NAS에서 서비스 실행 중, 잠긴 아이폰 자동 기록·자동 교체·백업 되살리기 확인 (2026-10-07) |
+| 다음 할 일 | 배우자 초대·기기 연결, 실제 사용하며 다듬기. 운영 방법은 `docs/deploy/README.md` |
 
 ## 2. 완료한 계획
 
@@ -24,7 +24,7 @@
 
 설계 문서는 `docs/superpowers/specs/`에 있다. 통계 화면과 기존 서비스 데이터 이전은 사용자 결정으로 하지 않는다.
 
-**테스트(2026-10-02 기준)**: 단위 74, DB 79, 화면(Playwright) 29, 배포 묶음 테스트 모두 통과.
+**테스트(2026-10-07 기준)**: 단위 77, DB 80, 화면(Playwright) 30, 배포 묶음 테스트 모두 통과.
 
 ## 3. 계획 4 (NAS 배포) 진행 상황
 
@@ -43,7 +43,7 @@
 | 7 태그 `v1.0.0`·이미지 공개 | 완료 | GHCR 공개, amd64 확인 |
 | 8 Cloudflare Tunnel | 완료 | 터널 `nof-ledger`(작업한 Mac의 `cloudflared`로 생성), `ledger.<도메인>` 연결 |
 | 9 NAS 설치·실행 | 완료 | 2026-10-06. app·cloudflared·watchtower·backup 4개 실행, `https://ledger.<도메인>/api/health` 응답, 첫 백업 파일 생성 |
-| 10 확인·문서 | **다음** | 아래 "Task 10 할 일" |
+| 10 확인·문서 | 완료 | 2026-10-07. 아래 "Task 10 결과" |
 
 **Task 9에서 알게 된 것(NAS 환경)**
 
@@ -53,7 +53,7 @@
   - 1.x는 `compose.yaml`을 자동으로 찾지 못하므로 항상 `docker-compose -f compose.yaml ...`로 실행한다.
   - `docker-compose run`은 sudo 환경에서 `docker` 경로를 못 찾아 실패한다. 한 번 실행은 `docker exec`를 쓴다.
 - NAS의 SFTP가 꺼져 있어 `scp`가 실패한다. 파일은 `ssh <NAS> "cat > <NAS 폴더>/파일" < 파일`로 올린다.
-- NAS `.env`(600)가 운영값의 기준이다(Supabase 주소·서비스 키, 사이트 주소, jev 키, 터널 열쇠, 백업 DB 주소). Mac의 `.env.cloud`·DB 비밀번호 파일은 Task 10까지만 쓰고 정리한다.
+- NAS `.env`(600)가 운영값의 기준이다(Supabase 주소·서비스 키, 사이트 주소, jev 키, 터널 열쇠, 백업 DB 주소). Mac의 `.env.cloud`·DB 비밀번호 파일은 2026-10-07에 삭제했다.
 - NAS에 Hyper Backup이 설치돼 있지 않다. 백업 파일은 NAS `<NAS 폴더>/backups`에만 있다(필요하면 Hyper Backup으로 다른 곳에 사본을 둔다).
 
 **자주 쓰는 운영 명령(NAS에서, `<NAS 폴더>` 안)**
@@ -65,14 +65,16 @@ sudo docker-compose -f compose.yaml pull && sudo docker-compose -f compose.yaml 
 sudo docker exec -e RUN_ONCE=1 nof-ledger_backup_1 sh /backup.sh                       # 지금 백업
 ```
 
-**Task 10 할 일**
+**Task 10 결과 (2026-10-07)**
 
-1. 아이폰에서 `https://ledger.<도메인>` Google 로그인 → 운영자 지정(`node --env-file=.env.cloud scripts/grant-operator.ts <이메일> <이름>`) → 그룹 만들기·배우자 초대
-2. 기기 연결 안내대로 두 아이폰에 단축어 설정 → **잠긴 상태에서** 카드 문자가 들어오는지 확인
-3. 홈 화면에 추가(PWA), 거래 수정·직접 입력이 실제 주소에서 되는지 확인
-4. 자동 갱신 확인: 작은 변경으로 `v1.0.1` 태그 → 5분 안에 `/api/health`의 version이 바뀌는지
-5. 다음 날 04:00 백업 파일 생성 확인, 백업 복구 시험(로컬 DB에 `pg_restore`)
-6. `docs/deploy/README.md` 작성(설치·갱신·되돌리기: 옛 태그를 수동 실행하면 `:latest`가 그 판으로 옮겨지고, 다음 태그에서 다시 앞으로 간다), Mac 임시 사본 정리, 이 문서 갱신
+- 운영자 지정(운영자 계정 1개), 아이폰 구글 로그인, 그룹 만들기 완료. 배우자 초대는 아직 안 함(지금은 한 명이 사용).
+- 기기 연결이 어렵다는 의견으로 아이폰 연결 방식을 바꿈: 미리 만든 단축어 받기 + 연결 코드 붙여넣기 + 자동화(v1.0.1~v1.0.3). 본문이 빈 요청은 '연결 확인'으로 처리.
+- **잠긴 아이폰에서 국민카드 결제 → 자동 기록 확인.** 처음 보는 가맹점이라 AI가 확신하지 못해 미분류로 남음(설계대로).
+- 자동 교체: 태그 후 약 3분 안에 NAS가 새 판으로 바꿈(3회 확인).
+- 백업: 새벽 04:00 자동 백업 생성 확인, 빈 DB에 되살리기 시험 통과(`supabase_vault` 오류 3줄만, 무시해도 됨).
+- 홈 거래 목록에 결제 시각(시:분) 표시 추가.
+- Mac의 `.env.cloud`·DB 비밀번호 파일 삭제. 운영값은 NAS `.env`가 기준(`docs/deploy/README.md` 8절).
+- 배포·운영 문서: `docs/deploy/README.md`
 
 ## 4. 다른 컴퓨터(집)에서 이어서 하기
 
@@ -98,8 +100,7 @@ GitHub로 옮기지 않는다. 필요한 컴퓨터에서 다시 만들거나 안
 |---|---|---|
 | `supabase/.env` | 로컬 Google 로그인(OAuth 클라이언트 ID·비밀값) | 로컬에서 Google 로그인 불가. 테스트는 통과 |
 | `~/.config/typesafe/api_key`(600) + `~/.zshenv`의 `TYPESAFE_API_KEY` 줄 | jev 분류 | 분류를 건너뜀(앱은 정상) |
-| `~/.config/nof-ledger/db_password`(600) | 클라우드 DB 비밀번호 | Task 5~ 진행 불가 |
-| `.env.cloud`(600) | 클라우드 접속값(운영자 지정 스크립트 등) | Task 6에서 다시 만든다 |
+| (클라우드 접속값) | 운영자 지정 스크립트 등 | Mac에 두지 않는다. NAS `.env`에서 그때그때 읽는다(`docs/deploy/README.md` 8절) |
 | `~/.ssh/nof_nas` + `~/.ssh/config`의 NAS 항목 | NAS SSH 키 로그인 | 4.3대로 그 컴퓨터에서 새 키를 만들어 등록 |
 
 커밋 전 검사(`.githooks/pre-commit`)는 이 파일들이 있는 컴퓨터에서만 실제 키 값 대조를 한다. 키 파일이 없는 컴퓨터에서는 gitleaks 검사만 한다.

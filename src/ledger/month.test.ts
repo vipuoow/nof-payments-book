@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  compareMonth, dayLabel, kstDayKey, kstLocalValue, kstMonthOf, monthLabel, monthParam, monthRange,
+  compareMonth, dayLabel, kstDayKey, kstLocalValue, kstTime, kstMonthOf, monthLabel, monthParam, monthRange,
   parseKstLocal, parseMonthParam, shiftMonth,
 } from "./month";
 
@@ -40,6 +40,12 @@ describe("월 계산 (KST)", () => {
     expect(monthLabel({ year: 2026, month: 9 })).toBe("2026년 9월");
     expect(dayLabel("2026-10-01")).toBe("10월 1일 (목)");
     expect(dayLabel("2026-10-02")).toBe("10월 2일 (금)");
+  });
+
+  it("결제 시각은 KST 시:분(24시간)", () => {
+    expect(kstTime(new Date("2026-10-07T02:11:00Z"))).toBe("11:11");
+    expect(kstTime(new Date("2026-10-06T15:05:00Z"))).toBe("00:05");
+    expect(kstTime(new Date("2026-10-07T13:30:59Z"))).toBe("22:30");
   });
 
   it("datetime-local 값은 KST로 해석하고, 없는 날짜는 null", () => {

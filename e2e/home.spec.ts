@@ -23,6 +23,8 @@ test("이번 달 합계·사람별 합계·날짜별 거래와 미분류 줄을 
   await expect(page.getByTestId("tx-row")).toHaveCount(3);
   await expect(page.getByTestId("tx-row").first()).toContainText("지에스(GS)25 테스트점");
   await expect(page.getByTestId("tx-row").first()).toContainText("미지정");
+  // 결제 시각(시:분)이 함께 보인다
+  await expect(page.getByTestId("tx-time").first()).toHaveText(kstStamp(1).slice(-5));
   await expect(page.getByRole("link", { name: /확인할 문자 1건/ })).toBeVisible();
 
   // 지난달로 가면 거래가 없고, 이번 달 이후로는 갈 수 없다
