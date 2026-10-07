@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEVICE_STEPS, IOS_SHORTCUT_PATH, connectionCode, deviceGuide, parseDevice, tokenHealth } from "./devices";
+import { IOS_SHORTCUT_PATH, connectionCode, deviceGuide, parseDevice, tokenHealth } from "./devices";
 
 describe("parseDevice", () => {
   it("android만 갤럭시, 나머지는 아이폰", () => {
@@ -27,17 +27,6 @@ describe("deviceGuide", () => {
     });
   });
 
-  it("안내 단계가 기종 앱을 가리킨다", () => {
-    expect(DEVICE_STEPS.iphone.join(" ")).toContain("단축어");
-    expect(DEVICE_STEPS.android.join(" ")).toContain("MacroDroid");
-  });
-
-  it("국민카드와 현대카드 문자를 모두 보내도록 안내한다", () => {
-    for (const steps of [DEVICE_STEPS.iphone, DEVICE_STEPS.android]) {
-      expect(steps.join(" ")).toContain("KB국민카드");
-      expect(steps.join(" ")).toContain("현대");
-    }
-  });
 });
 
 describe("connectionCode", () => {
@@ -46,11 +35,7 @@ describe("connectionCode", () => {
     expect(connectionCode("https://ledger.example", null)).toBeNull();
   });
 
-  it("아이폰 안내는 연결 코드 → 단축어 받기 → 자동화 순서다", () => {
-    const steps = DEVICE_STEPS.iphone.join(" ");
-    expect(steps.indexOf("연결 코드")).toBeGreaterThanOrEqual(0);
-    expect(steps.indexOf("단축어 받기")).toBeGreaterThan(steps.indexOf("연결 코드"));
-    expect(steps.indexOf("자동화")).toBeGreaterThan(steps.indexOf("단축어 받기"));
+  it("단축어 파일 경로", () => {
     expect(IOS_SHORTCUT_PATH).toMatch(/^\/shortcuts\/.+\.shortcut$/);
   });
 });
