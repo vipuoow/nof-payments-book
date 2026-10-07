@@ -38,7 +38,7 @@
 | 2 GitHub Actions 이미지 빌드 | 완료 | 태그를 붙여야 실행된다(아직 태그 없음) |
 | 3 NAS 묶음(`deploy/`) | 완료 | compose·백업 스크립트·환경 견본 |
 | 4 새 DB 마이그레이션 확인 | 완료 | `sh scripts/verify-fresh-migrations.sh` — 11개 적용, test:db 통과 |
-| 5 클라우드 DB 적용 | 완료 | 2026-10-06, 마이그레이션 11개 적용, 적용 전 백업은 작업한 Mac에 보관 |
+| 5 클라우드 DB 적용 | 완료 | 2026-10-06, 마이그레이션 11개 적용, 적용 전 백업은 2026-10-07에 삭제(NAS 매일 백업으로 대체) |
 | 6 `.env.cloud`·Auth 설정 | 완료 | 사이트 주소 `https://ledger.<도메인>`, 이메일 로그인 끔, Google 켬 |
 | 7 태그 `v1.0.0`·이미지 공개 | 완료 | GHCR 공개, amd64 확인 |
 | 8 Cloudflare Tunnel | 완료 | 터널 `nof-ledger`(작업한 Mac의 `cloudflared`로 생성), `ledger.<도메인>` 연결 |

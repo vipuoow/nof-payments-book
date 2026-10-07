@@ -17,6 +17,9 @@ touch -t "$(date -v-2d +%Y%m%d%H%M)" "$dir/.ledger-2000-03-01.dump.partial"
 run "postgresql://postgres:postgres@host.docker.internal:54322/postgres"
 today=$(TZ=Asia/Seoul date +%F)
 [ -s "$dir/ledger-$today.dump" ] || { echo "FAIL: 오늘 덤프 없음"; exit 1; }
+# 백업에는 장부 전체·로그인 정보가 있으므로 주인만 읽을 수 있어야 한다(NAS 다른 계정 차단)
+mode=$(stat -f %Lp "$dir/ledger-$today.dump" 2>/dev/null || stat -c %a "$dir/ledger-$today.dump")
+[ "$mode" = "600" ] || { echo "FAIL: 백업 파일 권한 $mode (600이어야 함)"; exit 1; }
 [ ! -e "$dir/ledger-2000-01-01.dump" ] || { echo "FAIL: 40일 지난 파일이 남음"; exit 1; }
 [ -e "$dir/ledger-2000-02-01.dump" ] || { echo "FAIL: 10일 된 파일이 지워짐"; exit 1; }
 [ ! -e "$dir/.ledger-2000-03-01.dump.partial" ] || { echo "FAIL: 오래된 조각 파일이 남음"; exit 1; }

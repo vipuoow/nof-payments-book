@@ -79,6 +79,7 @@ DB 구조를 바꾼 판(마이그레이션)을 되돌릴 때는 DB를 먼저 확
 
 - 자동: 매일 KST 04:00 `backups/ledger-YYYY-MM-DD.dump`(pg_dump custom 형식), 30일 지난 파일 삭제.
 - 지금 한 번: `sudo docker exec -e RUN_ONCE=1 nof-ledger_backup_1 sh /backup.sh`
+- **권한**: 백업에는 장부 전체·로그인 정보가 들어 있어 `backups/`는 700, 파일은 600(root)이다(2026-10-07). 시놀로지 공유 폴더 권한(모든 사람 읽기)이 이어지지 않도록 리눅스 권한으로 바꿔 두었고, `backup.sh`가 새 파일도 600으로 만든다. 관리용 계정으로도 직접 읽을 수 없으므로 꺼낼 때는 `sudo docker exec nof-ledger_backup_1 cat /backups/ledger-YYYY-MM-DD.dump > 받을파일`처럼 컨테이너를 거친다.
 - **되살리기 시험(2026-10-07 통과)**: 빈 Postgres 17에 아래처럼 넣으면 거래·문자·그룹·구성원·연결 코드·로그인 계정이 모두 돌아온다. `supabase_vault` 관련 오류 3줄은 Supabase 전용 확장이라 무시한다.
 
   ```sh

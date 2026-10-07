@@ -2,6 +2,8 @@
 # 매일 KST 04:00에 클라우드 DB를 덤프해 /backups에 30일 보관한다.
 # RUN_ONCE=1이면 한 번만 실행하고 끝난다(시험·수동 백업용). 접속 주소는 출력하지 않는다.
 set -u
+# 백업에는 장부 전체·로그인 정보가 들어 있다. 만들 때부터 주인(root)만 읽게 한다.
+umask 077
 : "${BACKUP_DATABASE_URL:?BACKUP_DATABASE_URL가 필요합니다}"
 
 backup() {
@@ -9,6 +11,8 @@ backup() {
   tmp="/backups/.ledger-$day.dump.partial"
   if pg_dump --format=custom --no-owner --dbname="$BACKUP_DATABASE_URL" --file="$tmp"; then
     mv "$tmp" "/backups/ledger-$day.dump"
+    # 시놀로지 공유 폴더 권한(ACL)이 이어지지 않도록 리눅스 권한으로 못 박는다
+    chmod 600 "/backups/ledger-$day.dump"
     # 성공했을 때만 오래된 파일을 정리한다
     find /backups -name 'ledger-*.dump' -mtime +30 -delete
     # 재시작 등으로 중단된 덤프 조각(하루 넘은 것)도 정리한다
