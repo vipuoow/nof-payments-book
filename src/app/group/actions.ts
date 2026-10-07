@@ -7,16 +7,16 @@ import { errorMessage } from "@/auth/messages";
 import type { SecretState } from "@/components/one-time-secret-form";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
-export async function createGroupAction() {
+export async function createGroupAction(formData: FormData) {
   const supabase = await createSupabaseServerClient();
-  const result = await createGroup(supabase);
+  const result = await createGroup(supabase, String(formData.get("name") ?? ""));
   if (!result.ok) redirect(`/group/new?error=${result.reason}`);
   redirect("/group");
 }
 
-export async function createGroupInviteAction(): Promise<SecretState> {
+export async function createGroupInviteAction(_prev: SecretState, formData: FormData): Promise<SecretState> {
   const supabase = await createSupabaseServerClient();
-  const result = await createGroupInvite(supabase);
+  const result = await createGroupInvite(supabase, String(formData.get("name") ?? ""));
   if (!result.ok) return { error: errorMessage(result.reason) };
   revalidatePath("/group");
   return { value: `${process.env.APP_URL}/invite/${result.value.token}` };

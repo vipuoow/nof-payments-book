@@ -43,7 +43,7 @@ async function serviceMember(label: string) {
 /** 그룹장 1명만 있는 그룹 */
 async function ownerWithGroup(label: string) {
   const owner = await serviceMember(label);
-  const groupId = expectOk(await createGroup(owner.client));
+  const groupId = expectOk(await createGroup(owner.client, "그룹장"));
   return { owner, groupId };
 }
 
@@ -61,7 +61,7 @@ describe("서비스 초대", () => {
   it("수락하면 프로필이 생기고 그룹 생성 권한을 받는다. 재사용은 거부", async () => {
     const user = await createAuthOnlyUser("svc");
     const { token } = expectOk(await createServiceInvite(operator.client));
-    expect(await getInviteStatus(admin, token)).toEqual({ status: "valid", kind: "service", inviterName: null });
+    expect(await getInviteStatus(admin, token)).toEqual({ status: "valid", kind: "service", inviterName: null, inviteeName: null });
 
     expect(await acceptInvite(user.client, token, "  새사람 ")).toEqual({ ok: true, value: { kind: "service", groupId: null } });
     const { data } = await admin.from("profiles").select("display_name, can_create_group").eq("user_id", user.userId).single();
@@ -112,23 +112,23 @@ describe("그룹", () => {
 
   it("그룹 생성 권한이 있는 사람만, 한 번만 만든다", async () => {
     const owner = await serviceMember("maker");
-    const groupId = expectOk(await createGroup(owner.client));
+    const groupId = expectOk(await createGroup(owner.client, "그룹장"));
     const { data } = await admin.from("group_members").select("group_id, role").eq("user_id", owner.userId).single();
     expect(data).toEqual({ group_id: groupId, role: "owner" });
-    expect(await createGroup(owner.client)).toEqual({ ok: false, reason: "already_in_group" });
+    expect(await createGroup(owner.client, "그룹장")).toEqual({ ok: false, reason: "already_in_group" });
 
     const noPerm = await createLoneUser("noperm");
-    expect(await createGroup(noPerm.client)).toEqual({ ok: false, reason: "not_allowed" });
+    expect(await createGroup(noPerm.client, "권한없음")).toEqual({ ok: false, reason: "not_allowed" });
   });
 
   it("그룹 초대는 그룹장만 발급하고, 수락하면 그룹원이 된다", async () => {
     const { owner, groupId } = await ownerWithGroup("ginv");
-    const { token } = expectOk(await createGroupInvite(owner.client));
-    expect(await getInviteStatus(admin, token)).toEqual({ status: "valid", kind: "group", inviterName: "ginv" });
+    const { token } = expectOk(await createGroupInvite(owner.client, "가족"));
+    expect(await getInviteStatus(admin, token)).toEqual({ status: "valid", kind: "group", inviterName: "그룹장", inviteeName: "가족" });
 
     const spouse = await createAuthOnlyUser("spouse");
     expect(await acceptInvite(spouse.client, token, "배우자")).toEqual({ ok: true, value: { kind: "group", groupId } });
-    expect(await createGroupInvite(spouse.client)).toEqual({ ok: false, reason: "not_allowed" });
+    expect(await createGroupInvite(spouse.client, "가족")).toEqual({ ok: false, reason: "not_allowed" });
   });
 
   it("2명이 찬 그룹에는 더 들어갈 수 없다", async () => {
@@ -145,8 +145,13 @@ describe("그룹", () => {
 
   it("마지막 한 자리를 두 사람이 동시에 수락하면 한 명만 들어간다", async () => {
     const { owner, groupId } = await ownerWithGroup("race");
-    const a = expectOk(await createGroupInvite(owner.client)).token;
-    const b = expectOk(await createGroupInvite(owner.client)).token;
+    // 새 링크를 만들면 이전 링크가 취소되므로, 살아 있는 링크 두 개는 DB에 직접 넣는다(예전 데이터·경쟁 상황)
+    const a = expectOk(await createGroupInvite(owner.client, "가족")).token;
+    const b = `race-b-${groupId}`;
+    await admin.from("group_invites").insert({
+      group_id: groupId, token_hash: sha256Hex(b), created_by: owner.userId,
+      expires_at: new Date(Date.now() + 86_400_000).toISOString(), invitee_name: "둘",
+    });
     const [u1, u2] = await Promise.all([createAuthOnlyUser("race1"), createAuthOnlyUser("race2")]);
 
     const results = await Promise.all([acceptInvite(u1.client, a, "하나"), acceptInvite(u2.client, b, "둘")]);
@@ -158,7 +163,7 @@ describe("그룹", () => {
 
   it("이미 그룹이 있는 사람은 다른 그룹 초대를 수락할 수 없고 기존 소속이 유지된다", async () => {
     const { owner } = await ownerWithGroup("other");
-    const { token } = expectOk(await createGroupInvite(owner.client));
+    const { token } = expectOk(await createGroupInvite(owner.client, "가족"));
     const g = await createGroupFixture("mine");
     expect(await acceptInvite(g.member.client, token, "이동")).toEqual({ ok: false, reason: "already_in_group" });
     const { data } = await admin.from("group_members").select("group_id").eq("user_id", g.member.userId).single();
@@ -167,7 +172,7 @@ describe("그룹", () => {
 
   it("취소한 그룹 초대는 수락할 수 없다", async () => {
     const { owner } = await ownerWithGroup("revoke");
-    const { token } = expectOk(await createGroupInvite(owner.client));
+    const { token } = expectOk(await createGroupInvite(owner.client, "가족"));
     const { data: inv } = await admin.from("group_invites").select("id").eq("token_hash", sha256Hex(token)).single();
     expectOk(await revokeGroupInvite(owner.client, inv!.id));
     const user = await createAuthOnlyUser("late");
@@ -176,7 +181,7 @@ describe("그룹", () => {
 
   it("그룹장은 자기 그룹 초대 목록을 보지만 토큰 해시는 볼 수 없다", async () => {
     const { owner } = await ownerWithGroup("list");
-    expectOk(await createGroupInvite(owner.client));
+    expectOk(await createGroupInvite(owner.client, "가족"));
     const visible = await owner.client.from("group_invites").select("id, expires_at, used_at, revoked_at");
     expect(visible.data).toHaveLength(1);
     const hidden = await owner.client.from("group_invites").select("token_hash");
@@ -194,7 +199,7 @@ describe("초대 없이 로그인한 사용자", () => {
     });
     const tx = await stranger.client.from("transactions").select("id");
     expect(tx.data).toEqual([]);
-    expect(await createGroup(stranger.client)).toEqual({ ok: false, reason: "not_allowed" });
+    expect(await createGroup(stranger.client, "남")).toEqual({ ok: false, reason: "not_allowed" });
     expect(await issueIngestToken(stranger.client, "x")).toEqual({ ok: false, reason: "not_in_group" });
   });
 });
