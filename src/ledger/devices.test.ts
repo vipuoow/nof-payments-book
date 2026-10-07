@@ -31,6 +31,13 @@ describe("deviceGuide", () => {
     expect(DEVICE_STEPS.iphone.join(" ")).toContain("단축어");
     expect(DEVICE_STEPS.android.join(" ")).toContain("MacroDroid");
   });
+
+  it("국민카드와 현대카드 문자를 모두 보내도록 안내한다", () => {
+    for (const steps of [DEVICE_STEPS.iphone, DEVICE_STEPS.android]) {
+      expect(steps.join(" ")).toContain("KB국민카드");
+      expect(steps.join(" ")).toContain("현대");
+    }
+  });
 });
 
 describe("connectionCode", () => {

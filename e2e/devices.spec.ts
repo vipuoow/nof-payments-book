@@ -12,7 +12,8 @@ test("아이폰은 연결 코드·단축어 받기 안내, 갤럭시는 복사�
 
   await expect(page.getByRole("link", { name: "아이폰" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("link", { name: "단축어 받기" })).toHaveAttribute("href", IOS_SHORTCUT_PATH);
-  await expect(page.getByText("[자동화]")).toBeVisible();
+  await expect(page.getByText("[자동화]")).toHaveCount(2); // 국민카드용, 현대카드용 자동화
+  await expect(page.getByText(/포함됨\]에 현대를 넣고/)).toBeVisible();
   await expect(page.getByTestId("copy-header")).toHaveCount(0);
 
   await page.getByPlaceholder("기기 이름").fill("내 아이폰");

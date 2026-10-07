@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { APPROVAL as HYUNDAI_APPROVAL } from "./__fixtures__/hyundai-card";
 import { APPROVAL, NOT_KB } from "./__fixtures__/kb-card";
 import { parseSms } from "./index";
 
@@ -9,6 +10,12 @@ describe("parseSms", () => {
     const { parserId, result } = parseSms(APPROVAL, received);
     expect(parserId).toBe("kb-card");
     expect(result.kind).toBe("approval");
+  });
+
+  it("현대카드 문자는 현대카드 분석기가 맡는다", () => {
+    const { parserId, result } = parseSms(HYUNDAI_APPROVAL, received);
+    expect(parserId).toBe("hyundai-card");
+    expect(result).toMatchObject({ kind: "approval", amount: 2600, issuer: "hyundai" });
   });
 
   it("맡을 분석기가 없으면 parserId null, unknown", () => {
