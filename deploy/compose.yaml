@@ -17,6 +17,10 @@ services:
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?}
       APP_URL: ${APP_URL:?}
       TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+      MEDIA_DIR: /app/media
+    # 처음 화면 배경 영상(landing.mp4)과 멈춘 그림(landing.jpg). 파일만 바꾸면 다시 배포하지 않아도 반영된다
+    volumes:
+      - ./media:/app/media:ro
     labels:
       com.centurylinklabs.watchtower.enable: "true"
     # 외부 포트를 열지 않는다. cloudflared만 app:3000으로 접속한다.

@@ -3,7 +3,8 @@ import { getInviteStatus, inviteStatusError } from "@/auth/invites";
 import { errorMessage } from "@/auth/messages";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { signInWithGoogle } from "../../login/actions";
+import { GoogleButton } from "@/components/landing/google-button";
+import { Landing } from "@/components/landing/landing";
 import { acceptInviteAction } from "./actions";
 
 export default async function InvitePage({
@@ -19,10 +20,9 @@ export default async function InvitePage({
 
   if (status.status !== "valid") {
     return (
-      <main className="mx-auto max-w-sm p-6">
-        <h1 className="mb-4 text-xl font-bold">초대</h1>
-        <p className="text-red-600">{errorMessage(inviteStatusError(status.status))}</p>
-      </main>
+      <Landing error={errorMessage(inviteStatusError(status.status))}>
+        <GoogleButton next="/" label="Google로 시작하기" />
+      </Landing>
     );
   }
 
@@ -33,10 +33,18 @@ export default async function InvitePage({
   const inviter = status.inviterName ?? "가족";
   const here = `/invite/${encodeURIComponent(token)}`;
 
+  if (!user) {
+    return (
+      <Landing note={`${inviter}님이 같이가계부에 초대했어요`} error={error ? errorMessage(error) : undefined}>
+        <GoogleButton next={here} label="Google로 가입하기" />
+        <p className="text-center text-xs text-white/75">가입하면 두 사람의 카드 결제가 한곳에 모여요.</p>
+      </Landing>
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-[480px] px-6 pb-6">
-      {user ? (
-        <form action={acceptInviteAction.bind(null, token)} className="flex min-h-[70dvh] flex-col">
+      <form action={acceptInviteAction.bind(null, token)} className="flex min-h-[70dvh] flex-col">
           <section className="flex flex-1 flex-col gap-3 pt-10">
             {status.kind === "group" ? (
               <>
@@ -50,14 +58,7 @@ export default async function InvitePage({
             {error && <p role="alert" className="text-sm text-danger">{errorMessage(error)}</p>}
           </section>
           <button className="rounded-2xl bg-accent py-4 font-semibold text-white">시작하기</button>
-        </form>
-      ) : (
-        <form action={signInWithGoogle.bind(null, here)} className="flex flex-col gap-3 pt-10">
-          <h1 className="text-2xl font-bold leading-snug">{inviter}님이 같이가계부에 초대했어요</h1>
-          {error && <p role="alert" className="text-sm text-danger">{errorMessage(error)}</p>}
-          <button className="w-full rounded-2xl bg-surface py-4 font-semibold">Google로 가입하기</button>
-        </form>
-      )}
+      </form>
     </main>
   );
 }

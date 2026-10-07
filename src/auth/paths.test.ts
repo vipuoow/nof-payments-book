@@ -54,4 +54,8 @@ describe("safeNextPath 제어 문자", () => {
     expect(safeNextPath("/\u0000x")).toBe("/");
     expect(safeNextPath("/group")).toBe("/group");
   });
+  it("배경 영상 파일(/media/)은 로그인 없이 받는다", () => {
+    expect(isPublicPath("/media/landing.mp4")).toBe(true);
+    expect(isPublicPath("/mediax")).toBe(false);
+  });
 });

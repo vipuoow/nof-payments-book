@@ -34,3 +34,6 @@ keys/
 *.rtf
 deploy/.env
 deploy/backups/
+
+# 처음 화면 배경 영상(NAS media/에 따로 둔다, 공개 저장소에 올리지 않는다)
+/media/
