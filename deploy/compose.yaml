@@ -1,10 +1,17 @@
 # NAS 프로젝트 "nof-ledger". 같은 폴더의 .env(권한 600)를 쓴다.
 # 묶음 이름은 .env의 COMPOSE_PROJECT_NAME으로 정한다(NAS의 docker-compose 1.x는 최상위 name: 키를 모른다).
+#
+# 회사 업무에 쓰는 NAS라 사용량을 묶어 둔다.
+# - cpuset "3": 4개 코어 중 마지막 하나만 쓴다(NAS 커널은 cpus 비율 제한을 지원하지 않는다).
+# - mem_limit = memswap_limit: 서비스별 메모리 상한, 스왑을 더 쓰지 않는다. 넘으면 그 서비스만 다시 시작된다.
 
 services:
   app:
     image: ghcr.io/vipuoow/nof-payments-book:latest
     restart: unless-stopped
+    cpuset: "3"
+    mem_limit: 512m
+    memswap_limit: 512m
     environment:
       SUPABASE_URL: ${SUPABASE_URL:?}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?}
@@ -17,6 +24,9 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
+    cpuset: "3"
+    mem_limit: 256m
+    memswap_limit: 256m
     # 이 Mac에서 만든(로컬 관리) 터널이라 연결 대상을 여기서 지정한다. 토큰은 .env의 TUNNEL_TOKEN.
     command: tunnel --no-autoupdate run --url http://app:3000
     environment:
@@ -26,6 +36,9 @@ services:
   watchtower:
     image: nickfedor/watchtower:latest
     restart: unless-stopped
+    cpuset: "3"
+    mem_limit: 128m
+    memswap_limit: 128m
     environment:
       WATCHTOWER_LABEL_ENABLE: "true"
       WATCHTOWER_CLEANUP: "true"
@@ -37,6 +50,9 @@ services:
   backup:
     image: postgres:17-alpine
     restart: unless-stopped
+    cpuset: "3"
+    mem_limit: 256m
+    memswap_limit: 256m
     # sh가 PID 1이면 정지 신호를 무시해 10초씩 기다리므로 init을 둔다
     init: true
     command: sh /backup.sh

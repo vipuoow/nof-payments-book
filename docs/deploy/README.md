@@ -30,6 +30,23 @@ Supabase 클라우드(DB·로그인) — 장부 원본
 - NAS의 SFTP가 꺼져 있어 `scp`가 안 된다. 파일은 `ssh nof-nas "cat > <NAS 폴더>/파일" < 파일`로 올린다.
 - NAS에 Hyper Backup이 없다. 백업 파일은 `<NAS 폴더>/backups`에만 있다.
 
+## 2-1. 회사 NAS 사용량 제한 (2026-10-07 적용)
+
+회사 업무용 NAS라 가계부가 업무에 지장을 주지 않도록 묶어 둔다(`deploy/compose.yaml`).
+
+| 서비스 | 코어 | 메모리 상한(스왑 추가 없음) | 평소 사용 |
+|---|---|---|---|
+| app | 4번째 코어만(`cpuset: "3"`) | 512MB | 약 40~50MB |
+| cloudflared | 같음 | 256MB | 약 15~30MB |
+| watchtower | 같음 | 128MB | 약 5~27MB |
+| backup | 같음 | 256MB | 약 2~6MB |
+
+- NAS 커널은 CPU 비율 제한(`cpus`)을 지원하지 않아 코어 지정으로 묶는다. 가계부 전체가 CPU의 25%를 넘을 수 없다.
+- 메모리 상한을 넘으면 그 서비스만 다시 시작되고 다른 업무에는 영향이 없다.
+- watchtower가 app을 새 판으로 바꿀 때도 같은 제한을 그대로 옮긴다. 교체 뒤 `docker inspect -f "{{.HostConfig.CpusetCpus}} {{.HostConfig.Memory}}" nof-ledger_app_1`로 확인한다.
+- 2026-10-07 점검: 평소 인터넷 사용 하루 약 60MB, 새 판 교체마다 약 45MB, 저장 공간 약 0.6GB + 백업 하루 약 0.45MB(30일 보관).
+- 새 판 교체는 지금은 5분마다 확인해 바로 바꾼다. 근무 시간 교체를 피하려면 watchtower에 `WATCHTOWER_SCHEDULE`(예: 매일 03:00)을 두는 방법이 있다.
+
 ## 3. 처음 설치
 
 1. `<NAS 폴더>`에 `deploy/compose.yaml`, `deploy/backup.sh`를 올리고 `backups/` 폴더를 만든다.
