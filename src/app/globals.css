@@ -60,3 +60,10 @@ body {
   border-radius: 20px;
   padding: 20px;
 }
+
+/* 가계부 친구 그림: 처음 화면 영상의 멈춘 그림(/media/landing.jpg)에서 가계부 친구 부분을 동그랗게 보여 준다. 파일이 없으면 바탕색만 */
+.mascot {
+  border-radius: 9999px;
+  background: #fff7e3 url("/media/landing.jpg") 50% 72% / 260% auto no-repeat;
+  box-shadow: 0 0 0 6px var(--surface);
+}

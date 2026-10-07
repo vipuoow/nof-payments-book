@@ -6,6 +6,8 @@ export type PendingInvite = { name: string; expiresAt: string; expired: boolean 
 export type Setup = {
   /** 그룹 구성원 중 누군가의 휴대폰에서 문자가 한 번이라도 도착했다 */
   anyConnected: boolean;
+  /** 연결된 사람의 닉네임(나를 먼저). 아무도 없으면 null */
+  connectedName: string | null;
   /** 내 휴대폰에서 문자가 한 번이라도 도착했다 */
   meConnected: boolean;
   /** 전체 한도를 한 번이라도 정했다 */
@@ -19,12 +21,13 @@ export async function loadSetup(db: SupabaseClient): Promise<Setup> {
   const { data, error } = await db.rpc("group_setup_status");
   if (error) throw error;
   const row = data as {
-    any_connected: boolean; me_connected: boolean; has_total_limit: boolean; member_count: number;
+    any_connected: boolean; connected_name: string | null; me_connected: boolean; has_total_limit: boolean; member_count: number;
     pending_invite: { name: string | null; expires_at: string; expired: boolean } | null;
   };
   const p = row.pending_invite;
   return {
     anyConnected: row.any_connected,
+    connectedName: row.connected_name,
     meConnected: row.me_connected,
     hasTotalLimit: row.has_total_limit,
     memberCount: row.member_count,

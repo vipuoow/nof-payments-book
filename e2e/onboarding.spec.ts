@@ -92,7 +92,7 @@ test("초대받은 사람은 이름 입력 없이 그룹장이 정한 닉네임�
   // 파트너가 들어오면 그룹장 메뉴에서 "파트너 잡으러 가기"가 사라진다
   await page.goto("/");
   await page.getByLabel("메뉴").click();
-  await expect(page.getByRole("link", { name: "내 휴대폰 연결" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "내 휴대폰 연결", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "파트너 잡으러 가기" })).toHaveCount(0);
   await guestCtx.close();
 });

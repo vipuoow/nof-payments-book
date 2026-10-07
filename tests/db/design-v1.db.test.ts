@@ -107,7 +107,7 @@ describe("처음 홈 상태", () => {
     const owner = await serviceMember("dv1-setup");
     const groupId = expectOk(await createGroup(owner.client, "남편"));
     expect(await loadSetup(owner.client)).toEqual({
-      anyConnected: false, meConnected: false, hasTotalLimit: false, memberCount: 1, pendingInvite: null,
+      anyConnected: false, connectedName: null, meConnected: false, hasTotalLimit: false, memberCount: 1, pendingInvite: null,
     });
 
     const { expiresAt } = expectOk(await createGroupInvite(owner.client, "아내"));
@@ -138,7 +138,7 @@ describe("처음 홈 상태", () => {
     await admin.from("ingest_tokens").update({ last_used_at: new Date().toISOString() }).eq("user_id", spouse.userId);
 
     const s = await loadSetup(owner.client);
-    expect(s).toMatchObject({ anyConnected: true, meConnected: false, memberCount: 2, pendingInvite: null });
+    expect(s).toMatchObject({ anyConnected: true, connectedName: "아내", meConnected: false, memberCount: 2, pendingInvite: null });
   });
 
   it("폐기한 기기는 연결로 치지 않는다", async () => {

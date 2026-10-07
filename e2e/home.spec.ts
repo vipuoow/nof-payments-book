@@ -1,15 +1,15 @@
 import { expect, test } from "@playwright/test";
 import { APPROVAL, APPROVAL_SMALL, UNKNOWN_KB } from "@/parsers/__fixtures__/kb-card";
 import { ingestMessage } from "@/ingest/service";
-import { adminClient, createGroupFixture, createLoneUser, type GroupFixture } from "../tests/helpers/db";
-import { at, signIn, kstStamp } from "./support";
+import { adminClient, createLoneUser, type GroupFixture } from "../tests/helpers/db";
+import { at, signIn, kstStamp, readyGroupFixture } from "./support";
 
 const db = adminClient();
 const send = (g: GroupFixture, who: "owner" | "member", body: string) =>
   ingestMessage(db, { userId: g[who].userId, groupId: g.groupId }, { body, receivedAt: new Date(), source: "manual_test" });
 
 test("이번 달 합계·사람별 합계·날짜별 거래와 미분류 줄을 보여 준다", async ({ page, context }) => {
-  const g = await createGroupFixture("e2e-home");
+  const g = await readyGroupFixture("e2e-home");
   await send(g, "owner", at(APPROVAL, kstStamp(3)));
   await send(g, "owner", at(APPROVAL, kstStamp(2)));
   await send(g, "member", at(APPROVAL_SMALL, kstStamp(1)));
@@ -35,8 +35,8 @@ test("이번 달 합계·사람별 합계·날짜별 거래와 미분류 줄을 
 });
 
 test("다른 그룹의 거래 id를 주소에 넣어도 시트가 열리지 않는다", async ({ page, context }) => {
-  const mine = await createGroupFixture("e2e-home-mine");
-  const other = await createGroupFixture("e2e-home-other");
+  const mine = await readyGroupFixture("e2e-home-mine");
+  const other = await readyGroupFixture("e2e-home-other");
   const r = await send(other, "owner", at(APPROVAL, kstStamp(3)));
 
   await signIn(context, mine.owner.email);

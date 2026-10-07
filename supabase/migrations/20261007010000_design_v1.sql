@@ -184,6 +184,12 @@ begin
     'any_connected', exists (
       select 1 from public.ingest_tokens t join public.group_members m on m.user_id = t.user_id
       where m.group_id = v_group and t.revoked_at is null and t.last_used_at is not null),
+    'connected_name', (
+      select p.display_name from public.ingest_tokens t
+      join public.group_members m on m.user_id = t.user_id
+      join public.profiles p on p.user_id = t.user_id
+      where m.group_id = v_group and t.revoked_at is null and t.last_used_at is not null
+      order by (t.user_id = auth.uid()) desc, t.last_used_at desc limit 1),
     'me_connected', exists (
       select 1 from public.ingest_tokens t
       where t.user_id = auth.uid() and t.revoked_at is null and t.last_used_at is not null),

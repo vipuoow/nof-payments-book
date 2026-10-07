@@ -3,13 +3,13 @@ import { APPROVAL } from "@/parsers/__fixtures__/kb-card";
 import { ingestMessage } from "@/ingest/service";
 import { budgetMonth } from "@/ledger/budget";
 import { kstMonthOf, shiftMonth } from "@/ledger/month";
-import { adminClient, createGroupFixture } from "../tests/helpers/db";
-import { at, kstStamp, signIn } from "./support";
+import { adminClient } from "../tests/helpers/db";
+import { at, kstStamp, signIn, readyGroupFixture } from "./support";
 
 const db = adminClient();
 
 test("지난달에 정한 전체 예산이 이번 달에도 이어지고, 80% 넘은 카테고리만 경고로 보인다", async ({ page, context }) => {
-  const g = await createGroupFixture("e2e-budget");
+  const g = await readyGroupFixture("e2e-budget");
   const r = await ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId },
     { body: at(APPROVAL, kstStamp(2)), receivedAt: new Date(), source: "manual_test" });
   const id = async (name: string) =>
@@ -37,16 +37,17 @@ test("지난달에 정한 전체 예산이 이번 달에도 이어지고, 80% �
   await expect(page.getByTestId("budget-category")).toHaveCount(0);
 });
 
-test("예산이 하나도 없으면 예산 영역이 없다", async ({ page, context }) => {
-  const g = await createGroupFixture("e2e-budget-none");
+test("분류별 예산이 없으면 전체 한도 막대만 있고 분류 경고는 없다", async ({ page, context }) => {
+  const g = await readyGroupFixture("e2e-budget-none");
   await signIn(context, g.owner.email);
   await page.goto("/");
   await expect(page.getByTestId("family-total")).toBeVisible();
-  await expect(page.getByTestId("budget-total")).toHaveCount(0);
+  await expect(page.getByTestId("budget-total")).toHaveCount(1);
+  await expect(page.getByTestId("budget-category")).toHaveCount(0);
 });
 
 test("숨긴 카테고리의 예산은 홈 경고에 나오지 않는다", async ({ page, context }) => {
-  const g = await createGroupFixture("e2e-budget-hidden");
+  const g = await readyGroupFixture("e2e-budget-hidden");
   const r = await ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId },
     { body: at(APPROVAL, kstStamp(2)), receivedAt: new Date(), source: "manual_test" });
   const cafe = (await db.from("categories").select("id").is("group_id", null).eq("name", "카페").single()).data!.id;

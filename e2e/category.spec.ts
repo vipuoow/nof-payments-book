@@ -1,15 +1,15 @@
 import { expect, test } from "@playwright/test";
 import { APPROVAL, APPROVAL_SMALL } from "@/parsers/__fixtures__/kb-card";
 import { ingestMessage } from "@/ingest/service";
-import { adminClient, createGroupFixture, type GroupFixture } from "../tests/helpers/db";
-import { at, signIn, kstStamp } from "./support";
+import { adminClient, type GroupFixture } from "../tests/helpers/db";
+import { at, signIn, kstStamp, readyGroupFixture } from "./support";
 
 const db = adminClient();
 const send = (g: GroupFixture, body: string) =>
   ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId }, { body, receivedAt: new Date(), source: "manual_test" });
 
 test("거래를 탭해 카테고리를 고르면 같은 가맹점 거래도 바뀌고 규칙이 저장된다", async ({ page, context }) => {
-  const g = await createGroupFixture("e2e-cat");
+  const g = await readyGroupFixture("e2e-cat");
   await send(g, at(APPROVAL, kstStamp(3)));
   await send(g, at(APPROVAL, kstStamp(2)));
   await send(g, at(APPROVAL_SMALL, kstStamp(1)));
@@ -34,7 +34,7 @@ test("거래를 탭해 카테고리를 고르면 같은 가맹점 거래도 바�
 });
 
 test("더 보기에서 메모·금액을 고치고, 잘못된 금액은 이유를 보여 준다", async ({ page, context }) => {
-  const g = await createGroupFixture("e2e-edit");
+  const g = await readyGroupFixture("e2e-edit");
   const r = await send(g, at(APPROVAL, kstStamp(3)));
 
   await signIn(context, g.owner.email);
@@ -56,7 +56,7 @@ test("더 보기에서 메모·금액을 고치고, 잘못된 금액은 이유�
 });
 
 test("문자에서 온 거래는 삭제 버튼이 없고 원문을 볼 수 있다", async ({ page, context }) => {
-  const g = await createGroupFixture("e2e-raw");
+  const g = await readyGroupFixture("e2e-raw");
   const r = await send(g, at(APPROVAL, kstStamp(3)));
   await signIn(context, g.owner.email);
   await page.goto(`/?tx=${r.transactionId}`);

@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { APPROVAL, UNKNOWN_KB } from "@/parsers/__fixtures__/kb-card";
 import { ingestMessage } from "@/ingest/service";
-import { adminClient, createGroupFixture } from "../tests/helpers/db";
-import { at, kstStamp, signIn } from "./support";
+import { adminClient } from "../tests/helpers/db";
+import { at, kstStamp, signIn, readyGroupFixture } from "./support";
 
 const db = adminClient();
 
 test("이미 처리된 문자는 무시·등록할 수 없고 거래도 만들지 않는다", async ({ page, context }) => {
-  const g = await createGroupFixture("e2e-raw-done");
+  const g = await readyGroupFixture("e2e-raw-done");
   await ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId }, { body: UNKNOWN_KB, receivedAt: new Date(), source: "manual_test" });
   const { data: raw } = await db.from("raw_messages").select("id").eq("group_id", g.groupId).single();
   await signIn(context, g.owner.email);
@@ -29,7 +29,7 @@ test("이미 처리된 문자는 무시·등록할 수 없고 거래도 만들�
 });
 
 test("이미 지워진 거래를 삭제하면 오류를 보여 준다", async ({ page, context }) => {
-  const g = await createGroupFixture("e2e-del-gone");
+  const g = await readyGroupFixture("e2e-del-gone");
   const { data: tx } = await db.from("transactions").insert({
     group_id: g.groupId, user_id: g.owner.userId, kind: "manual", amount: 5000,
     merchant: "시장", occurred_at: new Date(Date.now() - 60_000).toISOString(),
@@ -45,7 +45,7 @@ test("이미 지워진 거래를 삭제하면 오류를 보여 준다", async ({
 });
 
 test("시트는 모달로 포커스를 받고 배경 스크롤을 잠그며, 메뉴는 바깥을 탭하면 닫힌다", async ({ page, context }) => {
-  const g = await createGroupFixture("e2e-a11y");
+  const g = await readyGroupFixture("e2e-a11y");
   const r = await ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId },
     { body: at(APPROVAL, kstStamp(2)), receivedAt: new Date(), source: "manual_test" });
   await signIn(context, g.owner.email);

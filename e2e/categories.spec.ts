@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { APPROVAL } from "@/parsers/__fixtures__/kb-card";
 import { ingestMessage } from "@/ingest/service";
-import { adminClient, createGroupFixture } from "../tests/helpers/db";
-import { at, kstStamp, signIn } from "./support";
+import { adminClient } from "../tests/helpers/db";
+import { at, kstStamp, signIn, readyGroupFixture } from "./support";
 
 const db = adminClient();
 
 test("기본 숨기기, 우리 카테고리 추가·이름 바꾸기·삭제가 거래 시트에 반영된다", async ({ page, context }) => {
-  const g = await createGroupFixture("e2e-cats");
+  const g = await readyGroupFixture("e2e-cats");
   const r = await ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId },
     { body: at(APPROVAL, kstStamp(2)), receivedAt: new Date(), source: "manual_test" });
   await signIn(context, g.owner.email);
@@ -45,7 +45,7 @@ test("기본 숨기기, 우리 카테고리 추가·이름 바꾸기·삭제가 
 });
 
 test("가맹점 규칙을 지울 수 있다", async ({ page, context }) => {
-  const g = await createGroupFixture("e2e-rules");
+  const g = await readyGroupFixture("e2e-rules");
   const cafe = (await db.from("categories").select("id").is("group_id", null).eq("name", "카페").single()).data!.id;
   await db.from("merchant_rules").insert({ group_id: g.groupId, merchant_pattern: "테스트커피 강남역점(메가", category_id: cafe });
   await signIn(context, g.owner.email);

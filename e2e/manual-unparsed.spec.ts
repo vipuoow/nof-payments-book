@@ -1,15 +1,15 @@
 import { expect, test } from "@playwright/test";
 import { UNKNOWN_KB } from "@/parsers/__fixtures__/kb-card";
 import { ingestMessage } from "@/ingest/service";
-import { adminClient, createGroupFixture, type GroupFixture } from "../tests/helpers/db";
-import { signIn } from "./support";
+import { adminClient, type GroupFixture } from "../tests/helpers/db";
+import { signIn, readyGroupFixture } from "./support";
 
 const db = adminClient();
 const send = (g: GroupFixture, body: string) =>
   ingestMessage(db, { userId: g.member.userId, groupId: g.groupId }, { body, receivedAt: new Date(), source: "manual_test" });
 
 test("+로 직접 입력하면 홈에 나타나고, 잘못된 입력은 이유를 보여 준다", async ({ page, context }) => {
-  const g = await createGroupFixture("e2e-new");
+  const g = await readyGroupFixture("e2e-new");
   await signIn(context, g.owner.email);
   await page.goto("/");
   await page.getByRole("link", { name: "직접 입력" }).click();
@@ -37,7 +37,7 @@ test("+로 직접 입력하면 홈에 나타나고, 잘못된 입력은 이유�
 });
 
 test("미분류 문자를 거래로 등록하면 목록과 홈의 확인 줄에서 사라진다", async ({ page, context }) => {
-  const g = await createGroupFixture("e2e-unparsed");
+  const g = await readyGroupFixture("e2e-unparsed");
   await send(g, UNKNOWN_KB);
   await send(g, `${UNKNOWN_KB}\n두 번째`);
 
