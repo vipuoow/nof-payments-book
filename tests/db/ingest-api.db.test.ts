@@ -60,11 +60,27 @@ describe("POST /api/ingest", () => {
 
   it("JSON이 아니거나 형식이 틀리면 400", async () => {
     expect((await handleIngest(post("not json", token), deps())).status).toBe(400);
-    expect((await handleIngest(post({ body: "", source: "ios_shortcut" }, token), deps())).status).toBe(400);
     expect((await handleIngest(post({ body: APPROVAL, source: "pager" }, token), deps())).status).toBe(400);
     expect(
       (await handleIngest(post({ body: APPROVAL, source: "ios_shortcut", receivedAt: "어제" }, token), deps())).status,
     ).toBe(400);
+  });
+
+  it("본문이 비어 있으면 연결 확인으로 보고 기록 없이 200 connected, 마지막 수신 시각은 갱신", async () => {
+    const tg = await createGroupFixture("api-ping");
+    const t = await issueIngestToken(tg.owner.userId);
+    for (const body of ["", "   "]) {
+      const res = await handleIngest(post({ body, source: "ios_shortcut" }, t), deps());
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ status: "connected" });
+    }
+    const db = adminClient();
+    const { count } = await db.from("raw_messages").select("id", { count: "exact", head: true }).eq("group_id", tg.groupId);
+    expect(count).toBe(0);
+    const { data } = await db.from("ingest_tokens").select("last_used_at").eq("user_id", tg.owner.userId).single();
+    expect(new Date(data!.last_used_at).toISOString()).toBe(SERVER_NOW.toISOString());
+    // 토큰이 틀리면 연결 확인도 401
+    expect((await handleIngest(post({ body: "", source: "ios_shortcut" }, "wrong"), deps())).status).toBe(401);
   });
 
   it("가짜 토큰을 반복하는 IP는 토큰 확인 전에 429", async () => {

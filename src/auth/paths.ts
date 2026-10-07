@@ -9,7 +9,9 @@ export function isPublicPath(pathname: string): boolean {
     pathname === "/manifest.webmanifest" ||
     pathname === "/apple-icon" ||
     // 배포 확인(버전만 돌려주고 DB를 부르지 않는다)
-    pathname === "/api/health"
+    pathname === "/api/health" ||
+    // 아이폰 단축어 파일(비밀값 없음). 단축어 앱이 쿠키 없이 받을 수 있다
+    pathname.startsWith("/shortcuts/")
   );
 }
 

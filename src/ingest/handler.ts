@@ -6,6 +6,9 @@ import { resolveIngestToken } from "./auth";
 import type { RateLimiter } from "./rate-limit";
 import { ingestMessage } from "./service";
 
+/** 본문이 빈 요청은 연결 확인(단축어를 손으로 실행했을 때). 토큰 확인으로 마지막 수신 시각만 갱신된다. */
+const PingBody = z.object({ body: z.string().trim().max(0) });
+
 const RequestBody = z.object({
   body: z.string().trim().min(1).max(2000),
   receivedAt: z.iso.datetime({ offset: true }).optional(),
@@ -52,6 +55,7 @@ export async function handleIngest(req: Request, deps: IngestDeps): Promise<Resp
   } catch {
     return json(400, { error: "invalid_json" });
   }
+  if (PingBody.safeParse(payload).success) return json(200, { status: "connected" });
   const parsed = RequestBody.safeParse(payload);
   if (!parsed.success) return json(400, { error: "invalid_body" });
 

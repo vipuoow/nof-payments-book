@@ -5,6 +5,8 @@ describe("isPublicPath", () => {
   it("배포 확인 주소는 로그인 없이 연다", () => {
     expect(isPublicPath("/api/health")).toBe(true);
     expect(isPublicPath("/api/healthx")).toBe(false);
+    expect(isPublicPath("/shortcuts/ledger-send.shortcut")).toBe(true);
+    expect(isPublicPath("/shortcutsx")).toBe(false);
   });
 
   it("PWA 매니페스트·아이콘은 로그인 없이 연다", () => {
