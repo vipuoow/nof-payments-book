@@ -3,7 +3,8 @@
 
 단축어 동작:
   0. 텍스트 = 연결 코드("<받는 주소> <토큰>"). 추가한 뒤 사용자가 이 칸의 자리 글자를 지우고 붙여넣는다.
-     (추가 화면에서 묻는 방식은 아이폰에서 [단축어 추가]가 눌리지 않아 쓰지 않는다)
+     (추가 화면에서 묻는 방식은 아이폰에서 [단축어 추가]가 눌리지 않아 쓰지 않는다.
+      이 칸은 일반 문자열로 두면 편집기에서 고칠 수 없어서 변수 문자열 형식으로 넣는다)
   1. 연결 코드를 공백으로 나눔 → 2. 첫 항목 = 주소, 3. 마지막 항목 = 토큰
   4. 단축어 입력(문자)에서 텍스트를 꺼냄
   5. 주소로 POST, Authorization: Bearer <토큰>, JSON {body: 문자 내용, source: ios_shortcut}
@@ -66,7 +67,7 @@ def action(identifier: str, params: dict) -> dict:
 def build() -> dict:
     code, split, url, token, message = uid(), uid(), uid(), uid(), uid()
     actions = [
-        action("is.workflow.actions.gettext", {"UUID": code, "WFTextActionText": PLACEHOLDER}),
+        action("is.workflow.actions.gettext", {"UUID": code, "WFTextActionText": text(PLACEHOLDER)}),
         action("is.workflow.actions.text.split", {
             "UUID": split,
             "text": attachment(output(code, "텍스트")),
