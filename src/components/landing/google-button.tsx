@@ -1,4 +1,5 @@
 import { signInWithGoogle } from "@/app/login/actions";
+import { GisButton } from "./gis-button";
 
 /** Google 네 가지 색 G 로고 */
 export function GoogleLogo() {
@@ -12,8 +13,18 @@ export function GoogleLogo() {
   );
 }
 
-/** Google 로그인 버튼(리디렉트 방식). 흰 바탕, 가운데 정렬, 다른 버튼과 같은 높이 */
+/**
+ * Google 로그인 버튼. GOOGLE_CLIENT_ID가 있으면 우리 화면에서 직접 받는 방식(GIS),
+ * 없으면 지금의 리디렉트 방식이다. 그래서 Google 콘솔 설정 전에 배포해도 로그인이 깨지지 않는다.
+ */
 export function GoogleButton({ next, label }: { next: string; label: string }) {
+  const redirectButton = <RedirectButton next={next} label={label} />;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  return clientId ? <GisButton clientId={clientId} next={next} fallback={redirectButton} /> : redirectButton;
+}
+
+/** 리디렉트 방식 버튼: 흰 바탕, 가운데 정렬, 다른 버튼과 같은 높이 */
+function RedirectButton({ next, label }: { next: string; label: string }) {
   return (
     <form action={signInWithGoogle.bind(null, next)}>
       <button className="flex h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl bg-white font-semibold text-[#1f1f1f] shadow-[0_6px_20px_rgb(0_0_0/.25)]">

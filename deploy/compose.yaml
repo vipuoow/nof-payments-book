@@ -18,6 +18,8 @@ services:
       APP_URL: ${APP_URL:?}
       TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
       MEDIA_DIR: /app/media
+      # 비어 있으면 Google 로그인은 지금의 리디렉트 방식, 넣으면 우리 화면에서 직접 받는 방식
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     # 처음 화면 배경 영상(landing.mp4)과 멈춘 그림(landing.jpg). 파일만 바꾸면 다시 배포하지 않아도 반영된다
     volumes:
       - ./media:/app/media:ro
