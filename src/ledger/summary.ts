@@ -16,6 +16,8 @@ export type LedgerTx = {
   cancelsTransactionId: string | null;
   memo: string;
   rawMessageId: string | null;
+  /** 카드사(kb·hyundai). 직접 입력은 null */
+  issuer?: string | null;
 };
 
 export type Member = { userId: string; name: string };

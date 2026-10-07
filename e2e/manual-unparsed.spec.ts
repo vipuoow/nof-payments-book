@@ -23,7 +23,7 @@ test("+로 직접 입력하면 홈에 나타나고, 잘못된 입력은 이유�
   await page.getByLabel("카테고리").selectOption({ label: "식비" });
   await page.getByRole("button", { name: "저장" }).click();
 
-  await expect(page.getByTestId("family-total")).toHaveText("가족 8,000원");
+  await expect(page.getByTestId("family-total")).toHaveText("8,000원 썼어요");
   const row = page.getByTestId("tx-row").filter({ hasText: "동네 시장" });
   await expect(row).toContainText("식비");
   await expect(row).toContainText("e2e-new-owner");
@@ -43,7 +43,7 @@ test("미분류 문자를 거래로 등록하면 목록과 홈의 확인 줄에�
 
   await signIn(context, g.owner.email);
   await page.goto("/");
-  await page.getByRole("link", { name: /확인할 문자 2건/ }).click();
+  await page.getByRole("link", { name: /확인할 문자가 2건 있어요/ }).click();
   await expect(page.getByTestId("raw-item")).toHaveCount(2);
 
   await page.getByTestId("raw-item").filter({ hasText: "두 번째" }).getByRole("button", { name: "무시" }).click();

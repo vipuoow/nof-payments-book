@@ -74,5 +74,5 @@ test("한 달 거래가 많아도(승인 400건) 홈이 열린다", async ({ pag
   expect(error).toBeNull();
   await signIn(context, g.owner.email);
   await page.goto("/");
-  await expect(page.getByTestId("family-total")).toHaveText("가족 400,000원");
+  await expect(page.getByTestId("family-total")).toHaveText("400,000원 썼어요");
 });

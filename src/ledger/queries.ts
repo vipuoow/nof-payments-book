@@ -20,19 +20,19 @@ export type MonthData = {
 };
 
 const TX_COLUMNS =
-  "id, user_id, kind, amount, merchant, occurred_at, category_id, category_source, cancels_transaction_id, memo, raw_message_id";
+  "id, user_id, kind, amount, merchant, occurred_at, category_id, category_source, cancels_transaction_id, memo, raw_message_id, issuer";
 
 type TxRow = {
   id: string; user_id: string; kind: TxKind; amount: number; merchant: string; occurred_at: string;
   category_id: string | null; category_source: CategorySource; cancels_transaction_id: string | null;
-  memo: string; raw_message_id: string | null;
+  memo: string; raw_message_id: string | null; issuer: string | null;
 };
 
 function toLedgerTx(r: TxRow): LedgerTx {
   return {
     id: r.id, userId: r.user_id, kind: r.kind, amount: Number(r.amount), merchant: r.merchant,
     occurredAt: new Date(r.occurred_at), categoryId: r.category_id, categorySource: r.category_source,
-    cancelsTransactionId: r.cancels_transaction_id, memo: r.memo, rawMessageId: r.raw_message_id,
+    cancelsTransactionId: r.cancels_transaction_id, memo: r.memo, rawMessageId: r.raw_message_id, issuer: r.issuer,
   };
 }
 

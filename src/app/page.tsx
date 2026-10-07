@@ -52,6 +52,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     <main className="mx-auto w-full max-w-[480px] px-4 pb-24">
       {header}
       {!setup.meConnected && <NotConnectedBanner />}
+      <div className="card">
       <MonthSummary month={month} now={now} total={sum.total} byMember={sum.byMember} />
       <BudgetSummary
         budgets={data.budgets}
@@ -61,9 +62,10 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         warnRatio={data.warnRatio}
         hiddenIds={data.hiddenIds}
       />
+      </div>
       {data.unparsedCount > 0 && (
-        <Link href="/unparsed" className="mt-3 block rounded-xl bg-surface px-4 py-3 text-sm">
-          확인할 문자 {data.unparsedCount}건 <span className="float-right text-muted">›</span>
+        <Link href="/unparsed" className="mt-3 flex justify-between rounded-2xl bg-accent-soft px-4 py-3 text-sm font-semibold text-accent">
+          <span>확인할 문자가 {data.unparsedCount}건 있어요</span><span>›</span>
         </Link>
       )}
       {data.txs.length === 0 && compareMonth(month, kstMonthOf(now)) === 0 ? <EmptyCheer /> : <DayList

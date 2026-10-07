@@ -18,20 +18,24 @@ test("이번 달 합계·사람별 합계·날짜별 거래와 미분류 줄을 
   await signIn(context, g.owner.email);
   await page.goto("/");
 
-  await expect(page.getByTestId("family-total")).toHaveText("가족 25,500원");
-  await expect(page.getByText("e2e-home-owner 24,600 · e2e-home-member 900")).toBeVisible();
+  await expect(page.getByTestId("family-total")).toHaveText("25,500원 썼어요");
+  await expect(page.getByText("e2e-home-owner 24,600원 · e2e-home-member 900원")).toBeVisible();
   await expect(page.getByTestId("tx-row")).toHaveCount(3);
   await expect(page.getByTestId("tx-row").first()).toContainText("지에스(GS)25 테스트점");
   await expect(page.getByTestId("tx-row").first()).toContainText("미지정");
   // 결제 시각(시:분)이 함께 보인다
   await expect(page.getByTestId("tx-time").first()).toHaveText(kstStamp(1).slice(-5));
-  await expect(page.getByRole("link", { name: /확인할 문자 1건/ })).toBeVisible();
+  // 금액 아래에 쓴 카드
+  await expect(page.getByTestId("tx-card").first()).toHaveText("국민카드");
+  await expect(page.getByRole("link", { name: /확인할 문자가 1건 있어요/ })).toBeVisible();
 
   // 지난달로 가면 거래가 없고, 이번 달 이후로는 갈 수 없다
   await expect(page.getByRole("link", { name: "다음 달" })).toHaveCount(0);
   await page.getByRole("link", { name: "이전 달" }).click();
-  await expect(page.getByText("이 달에는 거래가 없습니다")).toBeVisible();
-  await expect(page.getByTestId("family-total")).toHaveText("가족 0원");
+  await expect(page.getByText("이 달에는 거래가 없어요")).toBeVisible();
+  await expect(page.getByTestId("family-total")).toHaveText("0원 썼어요");
+  // 지난달을 볼 때만 다음 달로 갈 수 있다
+  await expect(page.getByRole("link", { name: "다음 달" })).toBeVisible();
 });
 
 test("다른 그룹의 거래 id를 주소에 넣어도 시트가 열리지 않는다", async ({ page, context }) => {

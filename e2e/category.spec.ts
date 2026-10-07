@@ -49,7 +49,7 @@ test("더 보기에서 메모·금액을 고치고, 잘못된 금액은 이유�
   await sheet.getByLabel("메모").fill("회의 간식");
   await sheet.getByRole("button", { name: "저장" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByTestId("family-total")).toHaveText("가족 15,000원");
+  await expect(page.getByTestId("family-total")).toHaveText("15,000원 썼어요");
 
   const { data } = await db.from("transactions").select("amount, memo").eq("id", r.transactionId!).single();
   expect(data).toEqual({ amount: 15000, memo: "회의 간식" });
