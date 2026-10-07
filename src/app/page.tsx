@@ -10,13 +10,14 @@ import { isUuid } from "@/ledger/forms";
 import { monthParam, parseMonthParam } from "@/ledger/month";
 import { loadMonth, loadTransaction } from "@/ledger/queries";
 import { groupByDay, totals } from "@/ledger/summary";
+import { loadSetup } from "@/ledger/setup";
 import { loadMe } from "@/lib/session";
 
 export default async function Home({ searchParams }: PageProps<"/">) {
   const { supabase, me } = await loadMe();
-  if (!me.groupId) return <NoGroup me={me} />;
-
   const sp = await searchParams;
+  if (!me.groupId) return <NoGroup me={me} error={typeof sp.error === "string" ? sp.error : undefined} />;
+  const setup = await loadSetup(supabase);
   const now = new Date();
   const month = parseMonthParam(sp.month, now);
   const data = await loadMonth(supabase, me.groupId, month);
@@ -27,7 +28,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   return (
     <main className="mx-auto w-full max-w-[480px] px-4 pb-24">
       <header className="flex items-center justify-between py-3">
-        <AppMenu me={me} />
+        <AppMenu me={me} showPartner={me.role === "owner" && setup.memberCount < 2} />
         <Link href="/new" aria-label="직접 입력" className="px-2 text-2xl text-accent">+</Link>
       </header>
       <MonthSummary month={month} now={now} total={sum.total} byMember={sum.byMember} />

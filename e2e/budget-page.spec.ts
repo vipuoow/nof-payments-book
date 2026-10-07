@@ -10,9 +10,7 @@ test("예산을 정하면 이번 달부터 저장되고, 비우면 0으로 꺼�
   const g = await createGroupFixture("e2e-budget-page");
   const cafe = (await db.from("categories").select("id").is("group_id", null).eq("name", "카페").single()).data!.id;
   await signIn(context, g.owner.email);
-  await page.goto("/");
-  await page.getByLabel("메뉴").click();
-  await page.getByRole("link", { name: "예산" }).click();
+  await page.goto("/budget");
 
   await page.getByLabel("가족 전체 예산").fill("300,000");
   await page.getByLabel("카페 예산").fill("abc");

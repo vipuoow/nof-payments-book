@@ -60,7 +60,7 @@ test("시트는 모달로 포커스를 받고 배경 스크롤을 잠그며, 메
   expect(await page.evaluate(() => document.body.style.overflow)).toBe("");
 
   await page.getByLabel("메뉴").click();
-  await expect(page.getByRole("link", { name: "그룹" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "카테고리" })).toBeVisible();
   await page.mouse.click(380, 200); // 펼친 메뉴(왼쪽)에 가려지지 않는 오른쪽 빈 곳
-  await expect(page.getByRole("link", { name: "그룹" })).toBeHidden();
+  await expect(page.getByRole("link", { name: "카테고리" })).toBeHidden();
 });

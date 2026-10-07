@@ -45,9 +45,9 @@ test("다른 그룹의 거래 id를 주소에 넣어도 시트가 열리지 않�
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
-test("그룹이 없는 사용자는 안내를 본다", async ({ page, context }) => {
+test("가계부가 없고 만들 권한도 없는 사용자는 초대 링크를 받으라는 안내를 본다", async ({ page, context }) => {
   const lone = await createLoneUser("e2e-lone");
   await signIn(context, lone.email);
   await page.goto("/");
-  await expect(page.getByText("아직 그룹이 없습니다")).toBeVisible();
+  await expect(page.getByText(/아직 함께 쓰는 가계부가 없어요/)).toBeVisible();
 });

@@ -15,6 +15,8 @@ $$;
 
 -- 그룹 초대에 가족 닉네임
 alter table public.group_invites add column invitee_name text;
+-- 그룹장이 파트너 초대 화면에서 기다리는 사람의 닉네임을 본다(읽기 정책은 그룹장만)
+grant select (invitee_name) on public.group_invites to authenticated;
 
 -- 가계부 만들기: 그룹을 만들면서 내 닉네임을 저장한다
 drop function public.create_group();

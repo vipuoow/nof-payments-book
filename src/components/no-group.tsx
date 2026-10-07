@@ -1,20 +1,45 @@
 import Link from "next/link";
 import { signOut } from "@/app/actions";
+import { createGroupAction } from "@/app/group/actions";
+import { errorMessage } from "@/auth/messages";
 import type { Me } from "@/lib/session";
 
-export function NoGroup({ me }: { me: Me }) {
+/** 가계부가 아직 없는 사람의 홈: 가계부 만들기(내 닉네임). 만들 권한이 없으면 초대 링크를 받으라고 안내한다. */
+export function NoGroup({ me, error }: { me: Me; error?: string }) {
   return (
-    <main className="mx-auto w-full max-w-[480px] p-6">
-      <h1 className="mb-1 text-xl font-bold">{me.displayName}님</h1>
-      <p className="mb-6 text-muted">아직 그룹이 없습니다</p>
-      <nav className="flex flex-col gap-2">
-        {me.canCreateGroup && <Link className="text-accent" href="/group/new">그룹 만들기</Link>}
+    <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col px-4 pb-6">
+      <section className="flex flex-1 flex-col gap-3 px-2 pt-16">
+        <h1 className="text-2xl font-bold leading-snug">{me.displayName}님, 반가워요</h1>
+        {me.canCreateGroup ? (
+          <form id="create-group" action={createGroupAction} className="flex flex-col gap-3">
+            <p className="text-muted">가계부에서 나를 부를 닉네임을 정하고<br />가계부를 만들어요.</p>
+            <label className="mt-4 flex flex-col gap-1 text-sm text-muted">
+              내 닉네임
+              <input
+                name="name"
+                required
+                maxLength={10}
+                autoComplete="off"
+                placeholder="예: 남편"
+                className="border-b-2 border-accent bg-transparent py-3 text-lg text-foreground outline-none"
+              />
+            </label>
+            <p className="text-sm text-muted">거래 목록과 합계에 이 닉네임이 붙어요. 나중에 바꿀 수 없어요.</p>
+            {error && <p role="alert" className="text-sm text-danger">{errorMessage(error)}</p>}
+          </form>
+        ) : (
+          <p className="text-muted">아직 함께 쓰는 가계부가 없어요.<br />가족에게 초대 링크를 받아 주세요.</p>
+        )}
         {me.isOperator && <Link className="text-accent" href="/operator">운영자</Link>}
-      </nav>
-      <p className="mt-6 text-sm text-muted">가족에게 초대 링크를 받아 가입하면 같은 가계부를 함께 봅니다.</p>
-      <form action={signOut} className="mt-8">
-        <button className="text-sm text-muted">로그아웃</button>
-      </form>
+      </section>
+      <div className="flex flex-col items-center gap-3">
+        {me.canCreateGroup && (
+          <button form="create-group" className="w-full rounded-2xl bg-accent py-4 font-semibold text-white">가계부 만들기</button>
+        )}
+        <form action={signOut}>
+          <button className="text-sm text-muted">로그아웃</button>
+        </form>
+      </div>
     </main>
   );
 }

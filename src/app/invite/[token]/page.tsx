@@ -30,28 +30,32 @@ export default async function InvitePage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const title =
-    status.kind === "group"
-      ? `${status.inviterName ?? "가족"}님이 가계부에 초대했습니다`
-      : "가계부 서비스에 초대받았습니다";
+  const inviter = status.inviterName ?? "가족";
   const here = `/invite/${encodeURIComponent(token)}`;
 
   return (
-    <main className="mx-auto max-w-sm p-6">
-      <h1 className="mb-4 text-xl font-bold">{title}</h1>
-      {error && <p className="mb-3 text-red-600">{errorMessage(error)}</p>}
+    <main className="mx-auto w-full max-w-[480px] px-6 pb-6">
       {user ? (
-        <form action={acceptInviteAction.bind(null, token)} className="flex flex-col gap-3">
-          <p className="text-sm text-gray-600">{user.email} 계정으로 수락합니다.</p>
-          <label className="text-sm">
-            가계부에 표시할 이름
-            <input name="name" required defaultValue={defaultDisplayName(user)} className="mt-1 w-full rounded border p-2" />
-          </label>
-          <button className="rounded bg-black p-2 text-white">수락</button>
+        <form action={acceptInviteAction.bind(null, token)} className="flex min-h-[70dvh] flex-col">
+          <section className="flex flex-1 flex-col gap-3 pt-10">
+            {status.kind === "group" ? (
+              <>
+                <h1 className="text-2xl font-bold leading-snug">같이가계부에서<br />‘{status.inviteeName ?? defaultDisplayName(user)}’로 함께 써요</h1>
+                <p className="text-muted">닉네임은 {inviter}님이 정했어요.</p>
+              </>
+            ) : (
+              <h1 className="text-2xl font-bold leading-snug">같이가계부에 오신 걸 환영해요</h1>
+            )}
+            <p className="text-sm text-muted">{user.email} 계정으로 들어가요.</p>
+            {error && <p role="alert" className="text-sm text-danger">{errorMessage(error)}</p>}
+          </section>
+          <button className="rounded-2xl bg-accent py-4 font-semibold text-white">시작하기</button>
         </form>
       ) : (
-        <form action={signInWithGoogle.bind(null, here)}>
-          <button className="w-full rounded border p-2">Google로 가입</button>
+        <form action={signInWithGoogle.bind(null, here)} className="flex flex-col gap-3 pt-10">
+          <h1 className="text-2xl font-bold leading-snug">{inviter}님이 같이가계부에 초대했어요</h1>
+          {error && <p role="alert" className="text-sm text-danger">{errorMessage(error)}</p>}
+          <button className="w-full rounded-2xl bg-surface py-4 font-semibold">Google로 가입하기</button>
         </form>
       )}
     </main>
