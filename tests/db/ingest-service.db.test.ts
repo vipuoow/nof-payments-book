@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { APPROVAL, CANCEL, TRANSIT_NOTICE, UNKNOWN_KB } from "@/parsers/__fixtures__/kb-card";
+import { APPROVAL as HD_APPROVAL, CANCEL as HD_CANCEL } from "@/parsers/__fixtures__/hyundai-card";
 import { resolveIngestToken } from "@/ingest/auth";
 import { ingestMessage, type IngestSource } from "@/ingest/service";
 import {
@@ -137,6 +138,43 @@ describe("ingestMessage", () => {
     await ingestMessage(db, { userId: g.member.userId, groupId: g.groupId }, { body: CANCEL, receivedAt: received, source });
     const cancel = (await txOf(g.groupId)).find((t) => t.kind === "cancel")!;
     expect(cancel.cancels_transaction_id).toBeNull();
+  });
+
+  it("다른 카드사의 승인에는 취소가 연결되지 않는다(금액·가맹점이 같아도)", async () => {
+    const g = await createGroupFixture("issuer");
+    const owner = { userId: g.owner.userId, groupId: g.groupId };
+    // 국민카드 승인과 금액·가맹점이 같은 현대카드 취소
+    const hdCancel = HD_CANCEL.replace("2,600원", "12,300원").replace("10/07 16:50", "09/23 08:30")
+      .replace("테스트편의점 여의도점", "테스트커피 강남역점(메가");
+    await ingestMessage(db, owner, { body: at(APPROVAL, "09/23 08:26"), receivedAt: received, source });
+    await ingestMessage(db, owner, { body: hdCancel, receivedAt: received, source });
+    const cancel = (await txOf(g.groupId)).find((t) => t.kind === "cancel")!;
+    // 금액·가맹점이 정말 같아서, 카드사만 달라 연결되지 않은 것인지 확인한다
+    expect(cancel).toMatchObject({ amount: -12300, merchant: "테스트커피 강남역점(메가" });
+    expect(cancel.cancels_transaction_id).toBeNull();
+  });
+
+  it("먼저 온 취소도 다른 카드사의 나중 승인에는 연결되지 않는다", async () => {
+    const g = await createGroupFixture("issuer-early");
+    const owner = { userId: g.owner.userId, groupId: g.groupId };
+    const hdCancel = HD_CANCEL.replace("2,600원", "12,300원").replace("10/07 16:50", "09/23 08:30")
+      .replace("테스트편의점 여의도점", "테스트커피 강남역점(메가");
+    await ingestMessage(db, owner, { body: hdCancel, receivedAt: received, source });
+    await ingestMessage(db, owner, { body: at(APPROVAL, "09/23 08:26"), receivedAt: received, source });
+    const cancel = (await txOf(g.groupId)).find((t) => t.kind === "cancel")!;
+    // 금액·가맹점이 정말 같아서, 카드사만 달라 연결되지 않은 것인지 확인한다
+    expect(cancel).toMatchObject({ amount: -12300, merchant: "테스트커피 강남역점(메가" });
+    expect(cancel.cancels_transaction_id).toBeNull();
+  });
+
+  it("현대카드 승인 → 현대카드 취소는 서로 연결된다", async () => {
+    const g = await createGroupFixture("hyundai");
+    const owner = { userId: g.owner.userId, groupId: g.groupId };
+    const recv = new Date("2026-10-07T17:00:00+09:00");
+    await ingestMessage(db, owner, { body: HD_APPROVAL, receivedAt: recv, source });
+    await ingestMessage(db, owner, { body: HD_CANCEL, receivedAt: recv, source });
+    const [approval, cancel] = await txOf(g.groupId);
+    expect(cancel).toMatchObject({ kind: "cancel", amount: -2600, cancels_transaction_id: approval.id });
   });
 
   it("원 승인이 없는 취소는 음수 단독 거래", async () => {
