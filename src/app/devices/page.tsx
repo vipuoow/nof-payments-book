@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ConnectGuide } from "@/components/devices/connect-guide";
+import { InAppNotice } from "@/components/in-app-notice";
 import { parseDevice, tokenHealth } from "@/ledger/devices";
 import { detectDevice } from "@/ledger/guide";
 import { loadMe } from "@/lib/session";
@@ -26,6 +27,7 @@ export default async function DevicesPage({ searchParams }: PageProps<"/devices"
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col px-4 pb-10">
+      <div className="pt-3"><InAppNotice path="/devices" reason="단축어 추가가 안 될 수 있어요(버튼이 눌리지 않아요)." /></div>
       {/* 기종이 바뀌면 안내를 처음부터 다시 그린다 */}
       <ConnectGuide key={device} device={device} appUrl={process.env.APP_URL ?? ""} />
 

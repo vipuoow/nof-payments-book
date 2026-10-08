@@ -20,7 +20,7 @@ export default async function InvitePage({
 
   if (status.status !== "valid") {
     return (
-      <Landing error={errorMessage(inviteStatusError(status.status))}>
+      <Landing path={`/invite/${encodeURIComponent(token)}`} error={errorMessage(inviteStatusError(status.status))}>
         <GoogleButton next="/" label="Google로 시작하기" />
       </Landing>
     );
@@ -35,7 +35,7 @@ export default async function InvitePage({
 
   if (!user) {
     return (
-      <Landing note={`${inviter}님이 같이가계부에 초대했어요`} error={error ? errorMessage(error) : undefined}>
+      <Landing path={here} note={`${inviter}님이 같이가계부에 초대했어요`} error={error ? errorMessage(error) : undefined}>
         <GoogleButton next={here} label="Google로 가입하기" />
         <p className="text-center text-xs text-white/75">가입하면 두 사람의 카드 결제가 한곳에 모여요.</p>
       </Landing>
