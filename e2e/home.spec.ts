@@ -19,7 +19,7 @@ test("이번 달 합계·사람별 합계·날짜별 거래와 미분류 줄을 
   await page.goto("/");
 
   await expect(page.getByTestId("family-total")).toHaveText("25,500원 썼어요");
-  await expect(page.getByText("e2e-home-owner 24,600원 · e2e-home-member 900원")).toBeVisible();
+  await expect(page.getByText("e2e-home-owner 24,600원 | e2e-home-member 900원")).toBeVisible();
   await expect(page.getByTestId("tx-row")).toHaveCount(3);
   await expect(page.getByTestId("tx-row").first()).toContainText("지에스(GS)25 테스트점");
   await expect(page.getByTestId("tx-row").first()).toContainText("미지정");

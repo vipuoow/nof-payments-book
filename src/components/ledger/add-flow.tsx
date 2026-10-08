@@ -1,6 +1,8 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, useTransition } from "react";
+import { CheckButton } from "./check-button";
+import { CloseX } from "@/components/icons";
+import { useLayoutEffect, useRef, useState } from "react";
 import { createTx } from "@/app/tx-actions";
 import { kstLocalValue } from "@/ledger/month";
 import { splitLocal } from "@/ledger/when";
@@ -37,7 +39,6 @@ export function AddFlow({
   const [done, setDone] = useState<FieldKey[]>(start.done);
   const [redo, setRedo] = useState<FieldKey | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
   // 저장한 뒤 새 줄로 들어가기 전까지 다시 누를 수 없다(두 번 저장 방지)
   const [saved, setSaved] = useState(false);
   const fly = useRef<{ k: FieldKey; from: DOMRect | null } | null>(null);
@@ -68,39 +69,53 @@ export function AddFlow({
     }
   }, [done, redo]);
 
-  function next() {
-    if (!current || pending) return;
+  /** 지금 질문의 답 검사: 통과해야 버튼이 체크된다 */
+  function checkCurrent() {
+    if (!current) return false;
     const problem = checkField(current, draft);
-    if (problem) return setError(problem);
-    setError(null);
+    setError(problem);
+    return !problem;
+  }
+  /** 답을 위로 쌓고 다음 질문으로 */
+  function advance() {
+    if (!current) return;
     const q = center.current?.querySelector("input, .lx-chips, h2");
     fly.current = { k: current, from: q?.getBoundingClientRect() ?? null };
     setDone((d) => (d.includes(current) ? [...d] : [...d, current]));
     setRedo(null);
   }
 
-  function save() {
-    if (pending || saved) return;
+  /** Enter 키: 버튼과 같은 검사 뒤 바로 넘어간다 */
+  function next() {
+    if (checkCurrent()) advance();
+  }
+
+  function checkAll() {
+    if (saved) return false;
     const missing = STEPS.find((s) => checkField(s, draft));
-    if (missing) {
-      setRedo(missing);
-      return setError(checkField(missing, draft));
-    }
-    startTransition(async () => {
-      const r = await createTx({
-        amount: draft.amount, merchant: draft.merchant.trim(), occurredAt: `${draft.date}T${draft.time}`,
-        userId: draft.userId, categoryId: draft.categoryId ?? null, rawId,
-      });
-      if (!r.ok) return setError(r.error);
-      setSaved(true);
-      onSaved(r.id, r.month);
+    if (!missing) return true;
+    setRedo(missing);
+    setError(checkField(missing, draft));
+    return false;
+  }
+  async function save() {
+    const r = await createTx({
+      amount: draft.amount, merchant: draft.merchant.trim(), occurredAt: `${draft.date}T${draft.time}`,
+      userId: draft.userId, categoryId: draft.categoryId ?? null, rawId,
     });
+    if (!r.ok) {
+      setError(r.error);
+      return false;
+    }
+    setSaved(true);
+    onSaved(r.id, r.month);
+    return true;
   }
 
   return (
     <>
       <div className="lx-bar lx-fade">
-        <button type="button" onClick={onClose}>✕ 닫기</button>
+        <button type="button" onClick={onClose} aria-label="닫기" className="close-icon"><CloseX /></button>
         <span className="lx-dots" aria-hidden>
           {STEPS.map((s) => <i key={s} className={s === current && !redo ? "lx-on" : done.includes(s) ? "lx-done" : ""} />)}
         </span>
@@ -127,9 +142,9 @@ export function AddFlow({
       </div>
       <div className="lx-cta">
         {current ? (
-          <button type="button" className="lx-btn" onClick={next}>{redo ? "고쳤어요" : left === 0 ? "다 입력했어요" : "다음"}</button>
+          <CheckButton label={redo ? "고쳤어요" : left === 0 ? "다 입력했어요" : "다음"} validate={checkCurrent} run={advance} />
         ) : (
-          <button type="button" className="lx-btn" disabled={pending || saved} onClick={save}>{pending || saved ? "저장하는 중…" : "저장하기"}</button>
+          <CheckButton label="저장하기" validate={checkAll} run={save} keep />
         )}
       </div>
     </>

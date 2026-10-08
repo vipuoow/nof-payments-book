@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeft } from "@/components/icons";
 import { redirect } from "next/navigation";
 import { BudgetForm } from "@/components/ledger/budget-form";
 import { spentByCategory } from "@/ledger/budget";
@@ -18,7 +19,7 @@ export default async function BudgetPage() {
   return (
     <main className="mx-auto w-full max-w-[480px] px-4 pb-16">
       <header className="flex items-center justify-between py-3">
-        <Link href="/limit" className="text-accent">‹ 한도</Link>
+        <Link href="/limit" aria-label="한도" className="nav-icon"><ChevronLeft /></Link>
         <h1 className="font-semibold">분류별 예산</h1>
         <span className="w-8" />
       </header>

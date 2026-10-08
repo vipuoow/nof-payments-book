@@ -77,18 +77,18 @@ export function TxRows({
     <div className="mt-2">
       {days.map((g) => (
         <section key={g.key}>
-          <h2 className="tabular flex justify-between px-1 pb-2 pt-5 text-sm font-semibold text-muted">
+          <h2 className="tabular flex justify-between px-1 pb-2 pt-5 text-xs font-medium text-muted">
             <span>{g.label}</span>
             {/* 월 합계와 같은 방식: 취소는 음수라 그대로 더한다 */}
             <span data-testid="day-total">{formatWon(g.total)}원</span>
           </h2>
-          <ul className="overflow-hidden rounded-[20px] bg-surface py-1">
+          <ul className="overflow-hidden rounded-[20px] bg-surface py-0.5 shadow-[var(--card-shadow)]">
             {g.items.map((t) => {
               const category = t.categoryId ? choices.categoryNames[t.categoryId] : undefined;
               const manual = t.kind === "manual";
               const x = offset(t);
               return (
-                <li key={t.id} className="lx-swipe" data-swipe-id={t.id}>
+                <li key={t.id} className="lx-swipe border-line [&+&]:border-t" data-swipe-id={t.id}>
                   {manual && x < 0 && (
                     <button type="button" className="lx-trash" onClick={() => onAskDelete(t.id)}>지우기</button>
                   )}
@@ -97,7 +97,7 @@ export function TxRows({
                     data-row-id={t.id}
                     href={hrefOf(t.id)}
                     draggable={false}
-                    className={`lx-row flex items-center gap-3 px-4 py-3 ${drag?.id === t.id ? "lx-dragging" : ""}`}
+                    className={`lx-row flex items-center gap-3 px-4 py-[11px] ${drag?.id === t.id ? "lx-dragging" : ""}`}
                     style={x ? { transform: `translateX(${x}px)` } : undefined}
                     onPointerDown={(e) => {
                       if (e.button !== 0) return;
@@ -116,18 +116,18 @@ export function TxRows({
                       onOpen(t.id);
                     }}
                   >
-                    <span aria-hidden className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold ${category ? "bg-accent-soft text-accent" : "bg-background text-muted"}`}>
+                    <span aria-hidden className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-[13px] font-bold ${category ? "bg-accent-soft text-accent" : "bg-accent-soft text-muted"}`}>
                       {category ? category.slice(0, 1) : "?"}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold">{t.merchant}</span>
+                      <span className="block truncate text-[15px] font-semibold">{t.merchant}</span>
                       <span className="block truncate text-xs text-muted">
                         {category ?? "미지정"} · <span data-testid="tx-time" className="tabular">{kstTime(new Date(t.occurredAt))}</span>
                         {" · "}{names.get(t.userId) ?? ""}{t.categorySource === "ai" ? " · 자동" : ""}
                       </span>
                     </span>
                     <span className="flex shrink-0 flex-col items-end">
-                      <span className={`tabular font-semibold ${t.cancelled ? "text-muted line-through" : ""}`}>{formatWon(t.amount)}원</span>
+                      <span className={`tabular text-[15px] font-semibold ${t.cancelled ? "text-muted line-through" : ""}`}>{formatWon(t.amount)}원</span>
                       <span data-testid="tx-card" className="text-xs text-muted">{t.card}</span>
                     </span>
                   </a>

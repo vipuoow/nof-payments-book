@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeft } from "@/components/icons";
 import { redirect } from "next/navigation";
 import { ActionButton } from "@/components/action-button";
 import { NameForm } from "@/components/categories/name-form";
@@ -24,7 +25,7 @@ export default async function CategoriesPage() {
   return (
     <main className="mx-auto w-full max-w-[480px] px-4 pb-16">
       <header className="flex items-center justify-between py-3">
-        <Link href="/" className="text-accent">‹ 홈</Link>
+        <Link href="/" aria-label="홈" className="nav-icon"><ChevronLeft /></Link>
         <h1 className="font-semibold">카테고리</h1>
         <span className="w-8" />
       </header>

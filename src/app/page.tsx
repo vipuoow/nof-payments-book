@@ -1,13 +1,13 @@
 import { AppMenu } from "@/components/app-menu";
 import { BudgetSummary } from "@/components/ledger/budget-summary";
-import { spentByCategory } from "@/ledger/budget";
+import { spentByCategory, TOTAL } from "@/ledger/budget";
 import { AddButton } from "@/components/ledger/add-button";
 import { HomeLedger } from "@/components/ledger/home-ledger";
 import type { DayView, RawView } from "@/components/ledger/home-types";
-import { MonthSummary } from "@/components/ledger/month-summary";
+import { SpendCard } from "@/components/ledger/spend-card";
 import { NoGroup } from "@/components/no-group";
 import { issuerLabel, paidWithOf } from "@/ledger/issuer";
-import { compareMonth, kstLocalValue, kstMonthOf, monthParam, parseMonthParam } from "@/ledger/month";
+import { compareMonth, kstLocalValue, kstMonthOf, monthLabel, monthParam, parseMonthParam, shiftMonth } from "@/ledger/month";
 import { loadMonth, loadUnparsed } from "@/ledger/queries";
 import { guessFromSms } from "@/ledger/sms-guess";
 import { groupByDay, totals } from "@/ledger/summary";
@@ -40,6 +40,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const month = parseMonthParam(sp.month, now);
   const [data, unparsed] = await Promise.all([loadMonth(supabase, me.groupId, month), loadUnparsed(supabase)]);
   const sum = totals(data.txs, data.members);
+  const prev = shiftMonth(month, -1);
+  const next = shiftMonth(month, 1);
   const byId = new Map(data.txs.map((t) => [t.id, t]));
   const days: DayView[] = groupByDay(data.txs).map((g) => ({
     key: g.key,
@@ -66,17 +68,23 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         <AddButton month={monthParam(month)} />
       </header>
       {!setup.meConnected && <NotConnectedBanner />}
-      <div className="card">
-        <MonthSummary month={month} now={now} total={sum.total} byMember={sum.byMember} />
-        <BudgetSummary
-          budgets={data.budgets}
-          spentTotal={sum.total}
-          spentByCategory={spentByCategory(data.txs)}
-          categoryNames={data.categoryNames}
-          warnRatio={data.warnRatio}
-          hiddenIds={data.hiddenIds}
-        />
-      </div>
+      <SpendCard
+        nav={{
+          label: monthLabel(month),
+          prev: { href: `/?month=${monthParam(prev)}`, month: prev.month },
+          next: compareMonth(next, kstMonthOf(now)) <= 0 ? { href: `/?month=${monthParam(next)}`, month: next.month } : null,
+        }}
+        total={sum.total}
+        byMember={sum.byMember}
+        limit={data.budgets.get(TOTAL) ?? null}
+      />
+      <BudgetSummary
+        budgets={data.budgets}
+        spentByCategory={spentByCategory(data.txs)}
+        categoryNames={data.categoryNames}
+        warnRatio={data.warnRatio}
+        hiddenIds={data.hiddenIds}
+      />
       <HomeLedger
         days={days}
         month={monthParam(month)}

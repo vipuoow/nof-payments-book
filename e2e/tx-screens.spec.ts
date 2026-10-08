@@ -49,7 +49,7 @@ test("거래를 누르면 상세가 화면 가득 열리고, 분류를 고치면
   await expect(step).toHaveCount(0);
   await expect(field(detail, "분류")).toContainText("카페");
 
-  await detail.getByRole("button", { name: "✕ 닫기" }).click();
+  await detail.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page).not.toHaveURL(/tx=/);
   await expect(page.getByTestId("tx-row").first()).toContainText("카페");
@@ -239,7 +239,7 @@ test("검토 반영: 다른 달로 옮기면 상세가 닫히고, 상세에서�
   await p2.goto("/");
   await p2.getByTestId("tx-row").filter({ hasText: "테스트커피" }).click();
   await pickCategory(p2, "카페");
-  await p2.getByRole("dialog", { name: "거래 상세" }).getByRole("button", { name: "✕ 닫기" }).click();
+  await p2.getByRole("dialog", { name: "거래 상세" }).getByRole("button", { name: "닫기", exact: true }).click();
   await expect(p2.getByRole("dialog")).toHaveCount(0);
   await p2.goBack();
   await expect(p2).toHaveURL(/\/categories$/);

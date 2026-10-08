@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronLeft } from "@/components/icons";
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { issueTokenAction } from "@/app/devices/actions";
@@ -36,8 +37,8 @@ export function ConnectGuide({ device, appUrl }: { device: Device; appUrl: strin
     <div className="flex flex-1 flex-col">
       <div className="flex items-center justify-between py-3">
         {index > 0
-          ? <button type="button" aria-label="이전 단계" onClick={() => setIndex(index - 1)} className="px-1 text-2xl text-muted">‹</button>
-          : <Link href="/" aria-label="홈" className="px-1 text-2xl text-muted">‹</Link>}
+          ? <button type="button" aria-label="이전 단계" onClick={() => setIndex(index - 1)} className="nav-icon"><ChevronLeft /></button>
+          : <Link href="/" aria-label="홈" className="nav-icon"><ChevronLeft /></Link>}
         <span className="text-sm text-muted">{index + 1} / {steps.length}</span>
       </div>
       <div className="h-1 overflow-hidden rounded-full bg-line">

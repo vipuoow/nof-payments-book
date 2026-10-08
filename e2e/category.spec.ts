@@ -21,7 +21,7 @@ test("거래를 탭해 카테고리를 고르면 같은 가맹점 거래도 바�
 
   await coffee.first().click();
   await pickCategory(page, "카페");
-  await page.getByRole("dialog", { name: "거래 상세" }).getByRole("button", { name: "✕ 닫기" }).click();
+  await page.getByRole("dialog", { name: "거래 상세" }).getByRole("button", { name: "닫기", exact: true }).click();
 
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(coffee.filter({ hasText: "카페" })).toHaveCount(2);

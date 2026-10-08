@@ -1,5 +1,6 @@
 "use client";
 
+import { CloseX } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ignoreRawMessage } from "@/app/tx-actions";
@@ -44,7 +45,7 @@ export function Inbox({
   return (
     <>
       <div className="lx-bar lx-fade">
-        <button type="button" onClick={onClose}>✕ 닫기</button>
+        <button type="button" onClick={onClose} aria-label="닫기" className="close-icon"><CloseX /></button>
         <span className="font-semibold text-foreground">확인할 문자</span>
         <span className="w-14" />
       </div>

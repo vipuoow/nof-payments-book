@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { safeNextPath } from "@/auth/paths";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { syncThemeCookie } from "@/lib/theme-server";
 
 /** Google 로그인 후 돌아와 PKCE 코드를 세션으로 바꾸고, 원래 가려던 경로로 보낸다. */
 export async function GET(request: NextRequest) {
@@ -10,7 +11,10 @@ export async function GET(request: NextRequest) {
   if (code) {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(new URL(next, base));
+    if (!error) {
+      await syncThemeCookie(supabase);
+      return NextResponse.redirect(new URL(next, base));
+    }
   }
   return NextResponse.redirect(new URL("/login?error=login_failed", base));
 }

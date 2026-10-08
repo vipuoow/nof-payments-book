@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeft } from "@/components/icons";
 import { redirect } from "next/navigation";
 import { operatorOverview } from "@/auth/operator";
 import { GroupCard } from "@/components/operator/group-card";
@@ -15,7 +16,7 @@ export default async function OperatorPage() {
   return (
     <main className="mx-auto flex w-full max-w-[480px] flex-col gap-4 px-4 pb-16">
       <header className="flex items-center py-3">
-        <Link href="/" aria-label="홈" className="px-1 text-2xl text-muted">‹</Link>
+        <Link href="/" aria-label="홈" className="nav-icon"><ChevronLeft /></Link>
       </header>
       <h1 className="px-1 text-2xl font-bold">서비스 관리</h1>
       <section className="card grid grid-cols-3 gap-2 text-center">

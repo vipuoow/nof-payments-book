@@ -183,9 +183,9 @@ export function HomeLedger({
       {raws.length > 0 && (
         <button
           type="button" data-inbox-button onClick={() => go("inbox=1")}
-          className="mt-3 flex w-full justify-between rounded-2xl bg-accent-soft px-4 py-3 text-sm font-semibold text-accent"
+          className="notice-row mt-3"
         >
-          <span>확인할 문자가 {raws.length}건 있어요</span><span aria-hidden>›</span>
+          <span><i aria-hidden className="notice-dot" />확인할 문자가 {raws.length}건 있어요</span><span aria-hidden className="text-muted">›</span>
         </button>
       )}
       {empty ?? (

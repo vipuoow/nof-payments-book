@@ -14,7 +14,7 @@ test("거래 상세에서 온누리상품권 결제로 체크하면 결제 수�
   await expect(page.getByTestId("tx-card").first()).toHaveText("국민카드");
   const total = await page.getByTestId("family-total").textContent();
 
-  const close = () => page.getByRole("dialog", { name: "거래 상세" }).getByRole("button", { name: "✕ 닫기" }).click();
+  const close = () => page.getByRole("dialog", { name: "거래 상세" }).getByRole("button", { name: "닫기", exact: true }).click();
   await page.getByTestId("tx-row").first().click();
   const check = page.getByRole("checkbox", { name: /온누리상품권으로 결제/ });
   await expect(check).not.toBeChecked();

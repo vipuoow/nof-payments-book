@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeft } from "@/components/icons";
 import { redirect } from "next/navigation";
 import { revokeGroupInviteAction } from "@/app/group/actions";
 import { kstMonthDay } from "@/auth/invite-text";
@@ -29,7 +30,7 @@ export default async function PartnerPage({ searchParams }: PageProps<"/partner"
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col px-4 pb-6">
       <header className="flex items-center py-3">
-        <Link href="/" aria-label="홈" className="px-1 text-2xl text-muted">‹</Link>
+        <Link href="/" aria-label="홈" className="nav-icon"><ChevronLeft /></Link>
       </header>
       <PartnerInvite
         me={me.displayName}

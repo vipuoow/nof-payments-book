@@ -1,8 +1,33 @@
 @import "tailwindcss";
 
-/* 같이가계부 디자인 기준(설계 2026-10-07): 연회색 바탕 + 흰 카드, 강조색 하나. 다크 모드는 휴대폰 설정을 따른다. */
+/*
+ * 같이가계부 화면 모드(설계 2026-10-08): 사람마다 고른다(profiles.theme → 쿠키 → <html data-theme>).
+ * 기본: 흰색 → 아주 옅은 라벤더 배경 + 흰 카드, 강조는 차분한 보라. 밝게·어둡게는 예전 화면 그대로.
+ * 휴대폰 다크 모드를 자동으로 따르지 않는다(사용자 결정: 기기 설정 따르기 없음).
+ * --lv-*: 한도 상태색(50% 이하 녹색 · 85% 미만 노랑 · 85% 이상 빨강). -t는 글자용(밝은 바탕에서 읽히게 더 진함).
+ */
 :root {
+  --background: #f6f3fd;
+  --page-bg: linear-gradient(180deg, #fcfbff 0%, #f6f3fd 55%, #efeafa 100%);
+  --foreground: #221d36;
+  --muted: #857f98;
+  --line: #eeeaf6;
+  --surface: #ffffff;
+  --accent: #6a55d4;
+  --accent-soft: #f0ecfd;
+  --danger: #e5484d;
+  --warning: #e0a100;
+  --ok: #1e9e63;
+  --card-shadow: 0 1px 2px rgb(40 30 80 / .04), 0 10px 24px -14px rgb(90 70 170 / .22);
+  --lv-ok: #1e9e63; --lv-ok-t: #178553;
+  --lv-cau: #e0a100; --lv-cau-t: #a87700;
+  --lv-bad: #e5484d; --lv-bad-t: #d6343a;
+  color-scheme: light;
+}
+
+:root[data-theme="light"] {
   --background: #f2f4f6;
+  --page-bg: #f2f4f6;
   --foreground: #191f28;
   --muted: #6b7684;
   --line: #e5e8eb;
@@ -12,21 +37,29 @@
   --danger: #f04452;
   --warning: #ff9500;
   --ok: #1f9d55;
+  --card-shadow: none;
+  --lv-ok: #1f9d55; --lv-ok-t: #1a8a4a;
+  --lv-cau: #f5b301; --lv-cau-t: #a87700;
+  --lv-bad: #f04452; --lv-bad-t: #e02b3b;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #101013;
-    --foreground: #f2f4f6;
-    --muted: #9ea6b1;
-    --line: #2c2c33;
-    --surface: #1d1d22;
-    --accent: #4b93f8;
-    --accent-soft: #1b2a40;
-    --danger: #ff6370;
-    --warning: #ff9f0a;
-    --ok: #3ccf7d;
-  }
+:root[data-theme="dark"] {
+  --background: #101013;
+  --page-bg: #101013;
+  --foreground: #f2f4f6;
+  --muted: #9ea6b1;
+  --line: #2c2c33;
+  --surface: #1d1d22;
+  --accent: #4b93f8;
+  --accent-soft: #1b2a40;
+  --danger: #ff6370;
+  --warning: #ff9f0a;
+  --ok: #3ccf7d;
+  --card-shadow: none;
+  --lv-ok: #2fd283; --lv-ok-t: #4fe09a;
+  --lv-cau: #ffcf4d; --lv-cau-t: #ffd666;
+  --lv-bad: #ff5a76; --lv-bad-t: #ff7a91;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -44,7 +77,8 @@
 }
 
 body {
-  background: var(--background);
+  background: var(--page-bg);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-tap-highlight-color: transparent;
@@ -59,6 +93,7 @@ body {
   background: var(--surface);
   border-radius: 20px;
   padding: 20px;
+  box-shadow: var(--card-shadow);
 }
 
 /* 가계부 친구 그림: 처음 화면 영상의 멈춘 그림(/media/landing.jpg)에서 가계부 친구 부분을 동그랗게 보여 준다. 파일이 없으면 바탕색만 */
@@ -73,7 +108,7 @@ main { transition: transform .45s cubic-bezier(.2,.8,.2,1), filter .45s; transfo
 .lx-zoomed main { transform: scale(.94); filter: brightness(.85); }
 .lx-zoomed body { overflow: hidden; }
 
-.lx-layer { position: fixed; inset: 0; z-index: 30; background: var(--background); overflow: hidden; box-shadow: 0 20px 50px rgb(0 0 0 / .25); }
+.lx-layer { position: fixed; inset: 0; z-index: 30; background: var(--page-bg); background-color: var(--background); overflow: hidden; box-shadow: 0 20px 50px rgb(0 0 0 / .25); }
 .lx-inner { position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; max-width: 480px; margin: 0 auto; }
 .lx-bar { display: flex; justify-content: space-between; align-items: center; min-height: 52px; padding: 8px 12px 0; color: var(--muted); font-size: 13px; }
 .lx-bar button { font-size: 15px; color: var(--muted); padding: 6px; }
@@ -94,7 +129,7 @@ main { transition: transform .45s cubic-bezier(.2,.8,.2,1), filter .45s; transfo
 @keyframes lx-changed { 0%, 40% { background: var(--accent-soft); color: var(--accent); } }
 
 /* 항목 하나 고치기: 오른쪽에서 밀려 들어온다 */
-.lx-step { position: absolute; inset: 0; z-index: 2; background: var(--background); transform: translateX(100%); transition: transform .4s cubic-bezier(.2,.8,.2,1); }
+.lx-step { position: absolute; inset: 0; z-index: 2; background: var(--page-bg); background-color: var(--background); transform: translateX(100%); transition: transform .4s cubic-bezier(.2,.8,.2,1); }
 .lx-step.lx-step-in { transform: none; }
 
 .lx-q { display: flex; flex-direction: column; gap: 16px; padding: 0 22px; animation: lx-q-enter .35s cubic-bezier(.2,.8,.2,1); }
@@ -153,3 +188,53 @@ main { transition: transform .45s cubic-bezier(.2,.8,.2,1), filter .45s; transfo
   main, .lx-fade, .lx-step, .lx-row { transition-duration: 0s !important; transition-delay: 0s !important; }
   .lx-q, .lx-dim, .lx-confirm, .lx-gulp, .lx-ripple, .lx-draining::after, .lx-changed b, .lx-pop b { animation: none !important; }
 }
+
+/* 이동 아이콘(‹): 누르는 자리 44px, 그림은 예전 글자 ‹(24px)보다 약 4% 크게 */
+.nav-icon { display: grid; place-items: center; width: 44px; height: 44px; margin-left: -10px; color: var(--muted); border-radius: 50%; }
+.nav-icon svg { width: 25px; height: 25px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+/* 닫기(X): 글자 없이 크고 진하게 */
+.close-icon, .lx-bar .close-icon { display: grid; place-items: center; width: 44px; height: 44px; margin-left: -8px; color: var(--foreground); border-radius: 50%; }
+.close-icon svg, .lx-bar .close-icon svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.nav-icon:active, .close-icon:active { background: var(--line); }
+
+/* 홈 한도 카드(B안): 쓴 돈만 크게(상태색), 굵은 막대 끝까지가 한도, 남은 칸 안에 남은 돈 */
+.spend-card { overflow: hidden; touch-action: pan-y; }
+.spend { --lv: var(--foreground); --lv-t: var(--foreground); margin-top: 12px; }
+.spend[data-level="ok"] { --lv: var(--lv-ok); --lv-t: var(--lv-ok-t); }
+.spend[data-level="caution"] { --lv: var(--lv-cau); --lv-t: var(--lv-cau-t); }
+.spend[data-level="bad"] { --lv: var(--lv-bad); --lv-t: var(--lv-bad-t); }
+.spend-limit { font-size: 13.5px; font-weight: 500; color: color-mix(in srgb, var(--accent) 35%, var(--muted)); line-height: 1.2; letter-spacing: -.01em; }
+.spend-total { margin-top: 2px; font-size: 15px; font-weight: 600; line-height: 1.2; }
+.spend-total b { font-size: 27px; font-weight: 800; letter-spacing: -.03em; color: var(--lv-t); margin-right: 3px; }
+.spend-bar { position: relative; height: 22px; margin-top: 14px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.spend-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 99px; background: var(--lv); transition: width .5s cubic-bezier(.2,.8,.2,1); }
+.spend-rest { position: absolute; right: 10px; top: 0; bottom: 0; display: flex; align-items: center; font-size: 11.5px; font-weight: 700; color: var(--lv-t); white-space: nowrap; }
+.spend-bar.tight .spend-rest { color: #fff; }
+.spend[data-level="caution"] .spend-bar.tight .spend-rest { color: #3d2a00; }
+@media (prefers-reduced-motion: reduce) { .spend-bar i { transition: none; } }
+
+/* 알림줄(확인할 문자): 낮은 흰 줄 + 은은하게 깜빡이는 보라 점 */
+.notice-row { display: flex; width: 100%; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 14px; background: var(--surface); box-shadow: var(--card-shadow); font-size: 13.5px; color: var(--foreground); text-align: left; }
+.notice-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 8px; vertical-align: 1px; animation: notice-blink 2.4s ease-in-out infinite; }
+@keyframes notice-blink {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); }
+  50% { opacity: .35; box-shadow: 0 0 0 5px transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .notice-dot { animation: none; } }
+
+/* 체크 버튼: 줄어들며 ✓, 버튼 자리에서 빛이 화면으로 번진다 */
+.check-btn { transition: width .3s cubic-bezier(.2,.8,.2,1), border-radius .3s, transform .15s; }
+.check-btn:active { transform: scale(.97); }
+.check-btn.is-checking { width: 56px; height: 56px; padding: 0; margin: 0 auto; border-radius: 50%; display: grid; place-items: center;
+  animation: check-pop .43s cubic-bezier(.3,1.5,.5,1); box-shadow: 0 0 24px 6px color-mix(in srgb, var(--accent) 45%, transparent); }
+.check-mark { width: 26px; height: 26px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 24; stroke-dashoffset: 24; animation: check-draw .22s .12s ease-out forwards; }
+@keyframes check-draw { to { stroke-dashoffset: 0; } }
+@keyframes check-pop { 0% { transform: scale(1); } 55% { transform: scale(1.08); } 100% { transform: scale(1); } }
+.check-glow { position: fixed; z-index: 60; border-radius: 50%; pointer-events: none; opacity: 0; transform: scale(.04);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 30%, transparent) 0%, color-mix(in srgb, var(--accent) 16%, transparent) 26%, color-mix(in srgb, var(--accent) 7%, transparent) 46%, transparent 64%);
+  animation: check-glow .9s cubic-bezier(.2,.7,.2,1) forwards; }
+.check-glow::after { content: ""; position: absolute; inset: 18%; border-radius: 50%;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent), 0 0 30px 8px color-mix(in srgb, var(--accent) 18%, transparent); }
+@keyframes check-glow { 0% { transform: scale(.04); opacity: 0; } 18% { opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .check-btn.is-checking, .check-mark { animation: none; stroke-dashoffset: 0; } }

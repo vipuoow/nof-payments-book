@@ -57,3 +57,31 @@ describe("parseBudgetInput", () => {
     }
   });
 });
+
+describe("limitView (홈 한도 카드)", () => {
+  it("사용률에 따라 녹색·노랑·빨강", async () => {
+    const { limitView } = await import("./budget");
+    expect(limitView(1_000_000, 2_000_000).level).toBe("ok"); // 50%
+    expect(limitView(1_000_001, 2_000_000).level).toBe("caution");
+    expect(limitView(1_699_999, 2_000_000).level).toBe("caution");
+    expect(limitView(1_700_000, 2_000_000).level).toBe("bad"); // 85%
+  });
+
+  it("남은 돈이 10% 이상이면 한글 단위 금액, 밑이면 문구", async () => {
+    const { limitView } = await import("./budget");
+    expect(limitView(1_280_000, 2_000_000).label).toBe("72만원 남음");
+    expect(limitView(1_912_300, 2_000_000).label).toBe("거의 다 썼어요");
+    expect(limitView(2_000_000, 2_000_000).label).toBe("다 썼어요");
+    expect(limitView(2_100_000, 2_000_000).label).toBe("우리 다음 달을 생각해요");
+    expect(limitView(2_600_000, 2_000_000).label).toBe("슬픈 결제일이 될 것 같아요"); // 130%
+    expect(limitView(12_300, 100_000).label).toBe("8만 7700원 남음");
+  });
+
+  it("막대 채움은 0~1, 70%를 넘으면 글자를 막대 안쪽으로(tight)", async () => {
+    const { limitView } = await import("./budget");
+    expect(limitView(-5000, 100_000)).toMatchObject({ fill: 0, tight: false });
+    expect(limitView(70_000, 100_000)).toMatchObject({ fill: 0.7, tight: false });
+    expect(limitView(70_001, 100_000).tight).toBe(true);
+    expect(limitView(300_000, 100_000).fill).toBe(1);
+  });
+});

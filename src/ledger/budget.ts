@@ -1,3 +1,4 @@
+import { koWon } from "./won";
 import { monthParam, type Month } from "./month";
 import type { LedgerTx } from "./summary";
 
@@ -47,4 +48,22 @@ export function parseBudgetInput(text: string): { ok: true; amount: number | nul
   if (cleaned === "") return { ok: true, amount: null };
   if (!/^\d+$/.test(cleaned) || Number(cleaned) >= 1e12) return { ok: false, error: "0 이상 숫자로 입력해 주세요." };
   return { ok: true, amount: Number(cleaned) };
+}
+
+export type LimitLevel = "ok" | "caution" | "bad";
+
+/**
+ * 홈 한도 카드(설계 2026-10-08 B안). 사용률 50% 이하 녹색 · 85% 미만 노랑 · 85% 이상 빨강.
+ * 막대 안 글자: 남은 돈이 한도의 10% 이상이면 한글 단위 금액, 밑이면 문구.
+ * tight: 70% 넘게 써서 남은 칸이 좁으면 글자를 색 막대 끝 안쪽으로 옮긴다.
+ */
+export function limitView(spent: number, limit: number) {
+  const ratio = limit > 0 ? spent / limit : 1;
+  const level: LimitLevel = ratio <= 0.5 ? "ok" : ratio < 0.85 ? "caution" : "bad";
+  const rest = limit - spent;
+  const label = rest >= limit * 0.1 ? `${koWon(rest)}원 남음`
+    : rest > 0 ? "거의 다 썼어요"
+      : rest === 0 ? "다 썼어요"
+        : ratio < 1.3 ? "우리 다음 달을 생각해요" : "슬픈 결제일이 될 것 같아요";
+  return { level, label, fill: Math.min(1, Math.max(0, ratio)), tight: ratio > 0.7 };
 }

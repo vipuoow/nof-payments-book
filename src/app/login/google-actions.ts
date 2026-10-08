@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { hashNonce, newNonce } from "@/auth/nonce";
 import { safeNextPath } from "@/auth/paths";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { syncThemeCookie } from "@/lib/theme-server";
 
 const NONCE_COOKIE = "g_nonce";
 
@@ -26,5 +27,6 @@ export async function signInWithIdTokenAction(credential: string, next: string) 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithIdToken({ provider: "google", token: credential, nonce: raw });
   if (error) redirect("/login?error=login_failed");
+  await syncThemeCookie(supabase);
   redirect(safeNextPath(next));
 }

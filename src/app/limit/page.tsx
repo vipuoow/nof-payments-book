@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeft } from "@/components/icons";
 import { redirect } from "next/navigation";
 import { LimitForm } from "@/components/home/limit-form";
 import { TOTAL } from "@/ledger/budget";
@@ -19,7 +20,7 @@ export default async function LimitPage() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col px-4 pb-6">
       <header className="flex items-center py-3">
-        <Link href="/" aria-label="홈" className="px-1 text-2xl text-muted">‹</Link>
+        <Link href="/" aria-label="홈" className="nav-icon"><ChevronLeft /></Link>
       </header>
       <section className="px-2 pb-4 pt-2">
         <h1 className="text-2xl font-bold">한도 바꾸기</h1>

@@ -26,14 +26,16 @@ test("지난달에 정한 전체 예산이 이번 달에도 이어지고, 80% �
 
   await signIn(context, g.owner.email);
   await page.goto("/");
-  await expect(page.getByTestId("budget-total")).toContainText("87,700원 남았어요");
-  await expect(page.getByTestId("budget-total")).toContainText("예산의 12%");
+  // 한도 카드: 남은 돈은 막대 안에 한글 단위로, 사용률 12%는 녹색
+  await expect(page.getByTestId("budget-total")).toHaveText("8만 7700원 남음");
+  await expect(page.getByText("한도 10만원 중")).toBeVisible();
+  await expect(page.locator(".spend")).toHaveAttribute("data-level", "ok");
   await expect(page.getByTestId("budget-category")).toHaveCount(1);
   await expect(page.getByTestId("budget-category")).toHaveText("카페 123% 썼어요 · 2,300원 초과");
 
   // 지난달: 전체 예산만 있고(카테고리 예산은 이번 달부터) 쓴 돈이 없다
   await page.getByRole("link", { name: "이전 달" }).click();
-  await expect(page.getByTestId("budget-total")).toContainText("100,000원 남았어요");
+  await expect(page.getByTestId("budget-total")).toHaveText("10만원 남음");
   await expect(page.getByTestId("budget-category")).toHaveCount(0);
 });
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { CheckButton } from "./check-button";
+import { CloseX } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { setOnnuriPaid, updateTxField } from "@/app/tx-actions";
@@ -65,17 +67,25 @@ export function TxDetail({
       after?.();
     }, 400);
   }
-  function confirm() {
-    if (!step || pending) return;
+  /** 항목 하나 검사: 통과해야 [확인]이 체크된다 */
+  function checkStep() {
+    if (!step) return false;
     const problem = checkField(step, draft);
-    if (problem) return setError(problem);
+    setError(problem);
+    return !problem;
+  }
+  /** 저장하고 새 값을 받은 뒤(아래 효과) 상세로 돌아가 반짝인다 */
+  async function confirm() {
+    if (!step) return false;
     const k = step;
-    startTransition(async () => {
-      const r = await updateTxField(tx.id, patchOf(k, draft));
-      if (!r.ok) return setError(r.error);
-      saved.current = k;
-      router.refresh();
-    });
+    const r = await updateTxField(tx.id, patchOf(k, draft));
+    if (!r.ok) {
+      setError(r.error);
+      return false;
+    }
+    saved.current = k;
+    startTransition(() => router.refresh());
+    return true;
   }
   // 저장하고 새 값을 받은 뒤 돌아가서 반짝인다
   useEffect(() => {
@@ -100,7 +110,7 @@ export function TxDetail({
   return (
     <>
       <div className="lx-bar lx-fade">
-        <button type="button" onClick={onClose}>✕ 닫기</button>
+        <button type="button" onClick={onClose} aria-label="닫기" className="close-icon"><CloseX /></button>
       </div>
       {/* 작은 화면에서는 이 부분만 스크롤된다 */}
       <div className="min-h-0 flex-1 overflow-y-auto pb-6">
@@ -155,10 +165,10 @@ export function TxDetail({
               <span className="w-8" />
             </div>
             <div className="flex min-h-0 flex-1 flex-col justify-center">
-              <Question k={step} draft={draft} onChange={setDraft} onSubmit={confirm} choices={qChoices} error={error} />
+              <Question k={step} draft={draft} onChange={setDraft} onSubmit={() => { if (checkStep()) void confirm(); }} choices={qChoices} error={error} />
             </div>
             <div className="lx-cta">
-              <button type="button" className="lx-btn" disabled={pending} onClick={confirm}>확인</button>
+              <CheckButton label="확인" validate={checkStep} run={confirm} keep />
             </div>
           </div>
         </section>
