@@ -179,3 +179,23 @@ test("검토 반영: 키보드로 펼치면 버튼에 머무는 동안 접히지
   await page.getByLabel("메뉴", { exact: true }).focus();
   await expect(open).toHaveCount(0);
 });
+
+test("움직임 다듬기: 펼친 버튼 아래 3초 줄, 누르면 ✓ 체크 뒤 열림, 분기는 좌우로 놓이고 고르면 ✓ 체크", async ({ page, context }) => {
+  const g = await readyGroupFixture("e2e-add-motion");
+  await signIn(context, g.owner.email);
+  await page.goto("/");
+  await page.getByRole("button", { name: "결제 입력 메뉴" }).click();
+  await expect(page.locator(".add-fab-timer")).toBeVisible();
+  const open = page.getByRole("button", { name: "결제 직접 입력" });
+  await open.click();
+  await expect(page.locator("[data-add-button]")).toHaveAttribute("aria-busy", "true");
+  const add = page.getByRole("dialog", { name: "새로 추가" });
+  const paste = add.getByRole("button", { name: /카드 문자 붙여넣기/ });
+  const direct = add.getByRole("button", { name: /직접 적기/ });
+  const [a, b] = [(await paste.boundingBox())!, (await direct.boundingBox())!];
+  expect(Math.abs(a.y - b.y)).toBeLessThan(2); // 같은 줄
+  expect(b.x).toBeGreaterThan(a.x + a.width - 1); // 오른쪽
+  await paste.click();
+  await expect(paste).toHaveAttribute("aria-busy", "true");
+  await expect(add.getByLabel("결제 문자")).toBeVisible();
+});

@@ -2,7 +2,8 @@
 
 import { useImperativeHandle, useRef, useState, type Ref } from "react";
 
-const CHECK_MS = 430;
+/** 체크가 그려지고 빛이 번지는 시간. 고르기·입력 끝내기는 모두 이 시간 뒤에 넘어간다 */
+export const CHECK_MS = 430;
 /** 저장 요청이 서버에 닿지 못했을 때(연결 끊김) */
 export const OFFLINE = "저장하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.";
 
@@ -55,10 +56,22 @@ export function CheckButton({
       className={`lx-btn check-btn ${checking ? "is-checking" : ""}`}
     >
       {checking
-        ? <svg className="check-mark" viewBox="0 0 24 24" aria-hidden><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+        ? <CheckMark />
         : label}
     </button>
   );
+}
+
+/** 체크 표시(그려지듯 나타남). 버튼·고르기 카드·홈 + 버튼이 같이 쓴다 */
+export function CheckMark() {
+  return <svg className="check-mark" viewBox="0 0 24 24" aria-hidden><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>;
+}
+
+/** 고르기·입력 끝내기의 공통 움직임: 그 자리에서 빛이 은은하게 퍼진 뒤(동작 줄이기면 바로) next를 한다 */
+export function checkThen(from: HTMLElement | null, next: () => void) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return next();
+  if (from) glow(from);
+  window.setTimeout(next, CHECK_MS);
 }
 
 /** 버튼 가운데에서 화면 전체로 번지는 빛(옅은 물결 + 얇은 빛 고리) */
