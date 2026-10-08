@@ -4,6 +4,7 @@ import { spentByCategory, TOTAL } from "@/ledger/budget";
 import { AddButton } from "@/components/ledger/add-button";
 import { HomeLedger } from "@/components/ledger/home-ledger";
 import type { DayView, RawView } from "@/components/ledger/home-types";
+import { MonthBody, MonthSwitch } from "@/components/ledger/month-switch";
 import { SpendCard } from "@/components/ledger/spend-card";
 import { NoGroup } from "@/components/no-group";
 import { issuerLabel, paidWithOf } from "@/ledger/issuer";
@@ -68,16 +69,21 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         <AddButton month={monthParam(month)} />
       </header>
       {!setup.meConnected && <NotConnectedBanner />}
+      <MonthSwitch>
       <SpendCard
         nav={{
           label: monthLabel(month),
-          prev: { href: `/?month=${monthParam(prev)}`, month: prev.month },
-          next: compareMonth(next, kstMonthOf(now)) <= 0 ? { href: `/?month=${monthParam(next)}`, month: next.month } : null,
+          prev: { href: `/?month=${monthParam(prev)}`, month: prev.month, label: monthLabel(prev) },
+          next: compareMonth(next, kstMonthOf(now)) <= 0
+            ? { href: `/?month=${monthParam(next)}`, month: next.month, label: monthLabel(next) }
+            : null,
         }}
         total={sum.total}
         byMember={sum.byMember}
         limit={data.budgets.get(TOTAL) ?? null}
       />
+      {/* 달을 바꾸는 동안 아래는 자리표시로(카드와 함께) */}
+      <MonthBody>
       <BudgetSummary
         budgets={data.budgets}
         spentByCategory={spentByCategory(data.txs)}
@@ -94,6 +100,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         nowIso={now.toISOString()}
         empty={data.txs.length === 0 && compareMonth(month, kstMonthOf(now)) === 0 ? <EmptyCheer /> : null}
       />
+      </MonthBody>
+      </MonthSwitch>
     </main>
   );
 }

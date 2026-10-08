@@ -214,6 +214,12 @@ main { transition: transform .45s cubic-bezier(.2,.8,.2,1), filter .45s; transfo
 /* 어둡게 모드의 막대 색은 밝아서 흰 글자가 잘 안 읽힌다 → 진한 글자 */
 [data-theme="dark"] .spend-bar.tight .spend-rest { color: #1a0f14; }
 @media (prefers-reduced-motion: reduce) { .spend-bar i { transition: none; } }
+/* 달을 바꾸는 동안의 자리표시: 옅게 반짝이는 막대 */
+.skel i { display: block; height: 14px; border-radius: 8px;
+  background: linear-gradient(90deg, var(--line) 25%, color-mix(in srgb, var(--line) 35%, var(--surface)) 50%, var(--line) 75%);
+  background-size: 200% 100%; animation: skel 1.2s ease-in-out infinite; }
+@keyframes skel { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+@media (prefers-reduced-motion: reduce) { .skel i { animation: none; } }
 
 /* 알림줄(확인할 문자): 낮은 흰 줄 + 은은하게 깜빡이는 보라 점 */
 .notice-row { display: flex; width: 100%; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 14px; background: var(--surface); box-shadow: var(--card-shadow); font-size: 13.5px; color: var(--foreground); text-align: left; }
