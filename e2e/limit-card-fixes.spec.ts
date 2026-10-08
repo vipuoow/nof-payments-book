@@ -116,3 +116,16 @@ test("초대 전 계정으로 로그아웃되면 화면 모드 쿠키도 지운�
   await expect(page).toHaveURL(/error=no_profile/);
   expect((await context.cookies()).find((c) => c.name === "theme")).toBeUndefined();
 });
+
+test("손가락으로 밀 때(안쪽 글자에서 잡기가 옮겨 와도) 달이 바뀐다", async ({ page, context }) => {
+  const g = await readyGroupFixture("e2e-swipe-touch");
+  await signIn(context, g.owner.email);
+  await page.goto("/");
+  const label = await page.locator(".spend-card h1").textContent();
+  const { x, y } = await grabCard(page, 30);
+  // 손가락은 처음 닿은 안쪽 요소에 묶여 있다가 카드로 옮겨지며, 그 요소에서 '잡기 놓침'이 올라온다
+  await page.getByTestId("family-total").dispatchEvent("lostpointercapture", { bubbles: true, pointerId: 1 });
+  for (let i = 1; i <= 6; i++) await page.mouse.move(x + 30 + (90 * i) / 6, y);
+  await page.mouse.up();
+  await expect(page.locator(".spend-card h1")).not.toHaveText(label!);
+});

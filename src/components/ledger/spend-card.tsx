@@ -90,7 +90,8 @@ export function SpendCard({
         else bounce();
       }}
       onPointerCancel={() => { release(); bounce(); }}
-      onLostPointerCapture={() => { if (drag.current) { release(); bounce(); } }}
+      // 손가락은 처음 닿은 안쪽 요소에 묶였다가 카드로 옮겨지며, 그때 안쪽 요소의 '놓침'이 올라온다. 카드 자신의 것만 본다.
+      onLostPointerCapture={(e) => { if (e.target === e.currentTarget && drag.current) { release(); bounce(); } }}
     >
       <div ref={slide} className="spend-slide">
         <div className="grid grid-cols-[4rem_1fr_4rem] items-center text-[13px]">
