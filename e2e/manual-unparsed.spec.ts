@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { signIn, readyGroupFixture } from "./support";
+import { signIn, readyGroupFixture, openAdd } from "./support";
 
 test("새로 추가: 빈 금액·빈 가게는 다음으로 넘어가지 않고 이유를 보여 준다", async ({ page, context }) => {
   const g = await readyGroupFixture("e2e-new");
   await signIn(context, g.owner.email);
   await page.goto("/");
-  await page.getByRole("link", { name: "새로 추가" }).click();
+  await openAdd(page);
   const add = page.getByRole("dialog", { name: "새로 추가" });
 
   await add.getByRole("button", { name: "다음" }).click();

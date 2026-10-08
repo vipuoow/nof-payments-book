@@ -66,3 +66,9 @@ export async function pickCategory(page: Page, name: string) {
   await step.getByRole("button", { name: "확인" }).click();
   await expect(step).toHaveCount(0);
 }
+
+/** 홈 + → [결제 직접 입력]으로 새로 추가를 연다(분기 화면이 보인다) */
+export async function openAdd(page: Page) {
+  await page.getByRole("button", { name: "결제 입력 메뉴" }).click();
+  await page.getByRole("link", { name: "결제 직접 입력" }).click();
+}

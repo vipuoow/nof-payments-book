@@ -1,19 +1,56 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { pushOverlay } from "./overlay-history";
 
-/** 홈 머리의 +: 그 자리에서 새로 추가 화면이 커진다(주소에 add=1을 쌓는다) */
+const OPEN_MS = 3000;
+const CLOSE_MS = 250;
+
+/**
+ * 홈 머리의 +(설계 2026-10-08 붙여넣기). 누르면 +가 ×로 돌고 왼쪽에 [결제 직접 입력]이 펼쳐진다.
+ * 3초 동안 누르지 않거나, ×·바깥을 누르면 접힌다. 알약을 누르면 새로 추가(주소에 add=1)가 열린다.
+ */
 export function AddButton({ month }: { month: string }) {
   const href = `/?month=${month}&add=1`;
+  const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const closer = useRef<number | undefined>(undefined);
+
+  function close() {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return setOpen(false);
+    setClosing(true);
+    window.clearTimeout(closer.current);
+    closer.current = window.setTimeout(() => { setOpen(false); setClosing(false); }, CLOSE_MS);
+  }
+
+  // 열려 있는 동안만: 3초 타이머와 바깥 누르기
+  useEffect(() => {
+    if (!open || closing) return;
+    const timer = window.setTimeout(close, OPEN_MS);
+    const outside = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node)) close(); };
+    document.addEventListener("pointerdown", outside);
+    return () => { window.clearTimeout(timer); document.removeEventListener("pointerdown", outside); };
+  }, [open, closing]);
+  useEffect(() => () => window.clearTimeout(closer.current), []);
+
   return (
-    <a
-      href={href} data-add-button aria-label="새로 추가" className="grid h-10 w-10 place-items-center rounded-full text-[25px] text-accent"
-      onClick={(e) => {
-        e.preventDefault();
-        pushOverlay(href);
-      }}
-    >
-      +
-    </a>
+    <div ref={box} className={`add-menu ${open && !closing ? "is-open" : ""}`}>
+      {open && (
+        <a
+          href={href} className={`add-pill ${closing ? "is-closing" : ""}`}
+          onClick={(e) => { e.preventDefault(); setOpen(false); setClosing(false); pushOverlay(href); }}
+        >
+          결제 직접 입력
+        </a>
+      )}
+      <button
+        type="button" aria-label="결제 입력 메뉴" aria-expanded={open && !closing}
+        onClick={() => (open && !closing ? close() : (setClosing(false), setOpen(true)))}
+        className="add-plus grid h-10 w-10 place-items-center rounded-full text-[25px] text-accent"
+      >
+        <span aria-hidden>+</span>
+      </button>
+    </div>
   );
 }
