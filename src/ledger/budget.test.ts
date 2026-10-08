@@ -84,4 +84,16 @@ describe("limitView (홈 한도 카드)", () => {
     expect(limitView(70_001, 100_000).tight).toBe(true);
     expect(limitView(300_000, 100_000).fill).toBe(1);
   });
+
+  it("70% 밑이어도 남은 금액 글자가 남은 칸보다 길면 막대 안쪽으로", async () => {
+    const { limitView } = await import("./budget");
+    const v = limitView(86_000_000, 123_456_789); // 69.7%, "3745만 6789원 남음"
+    expect(v.label).toBe("3745만 6789원 남음");
+    expect(v.tight).toBe(true);
+  });
+
+  it("취소가 더 커서 쓴 돈이 음수면 녹색, 한도보다 많이 남았다고 보인다", async () => {
+    const { limitView } = await import("./budget");
+    expect(limitView(-5000, 100_000)).toEqual({ level: "ok", label: "10만 5000원 남음", fill: 0, tight: false });
+  });
 });

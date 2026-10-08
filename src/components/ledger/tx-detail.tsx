@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckButton } from "./check-button";
+import { CheckButton, OFFLINE, type CheckButtonHandle } from "./check-button";
 import { CloseX } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
@@ -39,6 +39,7 @@ export function TxDetail({
   const [changed, setChanged] = useState<FieldKey | null>(null);
   const [pending, startTransition] = useTransition();
   const saved = useRef<FieldKey | null>(null);
+  const cta = useRef<CheckButtonHandle>(null);
   // 누르면 바로 체크가 바뀌고, 저장에 실패하면 원래대로 돌아간다
   const [onnuri, setOnnuri] = useOptimistic(tx.paidWith === "onnuri");
 
@@ -78,7 +79,7 @@ export function TxDetail({
   async function confirm() {
     if (!step) return false;
     const k = step;
-    const r = await updateTxField(tx.id, patchOf(k, draft));
+    const r = await updateTxField(tx.id, patchOf(k, draft)).catch(() => ({ ok: false as const, error: OFFLINE }));
     if (!r.ok) {
       setError(r.error);
       return false;
@@ -143,7 +144,7 @@ export function TxDetail({
             <span className="block text-xs text-muted">카드값은 안 나가요. 쓴 돈에는 그대로 들어가요.</span>
           </span>
           <input
-            type="checkbox" checked={onnuri} disabled={pending}
+            type="checkbox" checked={onnuri} disabled={pending || step !== null}
             onChange={(e) => toggleOnnuri(e.target.checked)} className="h-6 w-6 shrink-0 accent-accent"
           />
         </label>
@@ -165,10 +166,10 @@ export function TxDetail({
               <span className="w-8" />
             </div>
             <div className="flex min-h-0 flex-1 flex-col justify-center">
-              <Question k={step} draft={draft} onChange={setDraft} onSubmit={() => { if (checkStep()) void confirm(); }} choices={qChoices} error={error} />
+              <Question k={step} draft={draft} onChange={setDraft} onSubmit={() => cta.current?.press()} choices={qChoices} error={error} />
             </div>
             <div className="lx-cta">
-              <CheckButton label="확인" validate={checkStep} run={confirm} keep />
+              <CheckButton ref={cta} label="확인" validate={checkStep} run={confirm} keep />
             </div>
           </div>
         </section>

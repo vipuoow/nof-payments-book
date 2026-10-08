@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckButton } from "./check-button";
+import { CheckButton, OFFLINE, type CheckButtonHandle } from "./check-button";
 import { CloseX } from "@/components/icons";
 import { useLayoutEffect, useRef, useState } from "react";
 import { createTx } from "@/app/tx-actions";
@@ -45,6 +45,7 @@ export function AddFlow({
   const firstStack = useRef(true);
   const center = useRef<HTMLDivElement>(null);
   const stack = useRef<HTMLDivElement>(null);
+  const cta = useRef<CheckButtonHandle>(null);
 
   const current = redo ?? STEPS.find((s) => !done.includes(s)) ?? null;
   const left = STEPS.filter((s) => !done.includes(s) && s !== current).length;
@@ -85,10 +86,6 @@ export function AddFlow({
     setRedo(null);
   }
 
-  /** Enter 키: 버튼과 같은 검사 뒤 바로 넘어간다 */
-  function next() {
-    if (checkCurrent()) advance();
-  }
 
   function checkAll() {
     if (saved) return false;
@@ -102,7 +99,7 @@ export function AddFlow({
     const r = await createTx({
       amount: draft.amount, merchant: draft.merchant.trim(), occurredAt: `${draft.date}T${draft.time}`,
       userId: draft.userId, categoryId: draft.categoryId ?? null, rawId,
-    });
+    }).catch(() => ({ ok: false as const, error: OFFLINE }));
     if (!r.ok) {
       setError(r.error);
       return false;
@@ -131,7 +128,7 @@ export function AddFlow({
       </div>
       <div ref={center} className="flex min-h-0 flex-1 flex-col justify-center">
         {current ? (
-          <Question key={current} k={current} draft={draft} onChange={setDraft} onSubmit={next} choices={qChoices} error={error} />
+          <Question key={current} k={current} draft={draft} onChange={setDraft} onSubmit={() => cta.current?.press()} choices={qChoices} error={error} />
         ) : (
           <div className="lx-q">
             <h2>다 입력했어요</h2>
@@ -142,9 +139,9 @@ export function AddFlow({
       </div>
       <div className="lx-cta">
         {current ? (
-          <CheckButton label={redo ? "고쳤어요" : left === 0 ? "다 입력했어요" : "다음"} validate={checkCurrent} run={advance} />
+          <CheckButton key="step" ref={cta} label={redo ? "고쳤어요" : left === 0 ? "다 입력했어요" : "다음"} validate={checkCurrent} run={advance} />
         ) : (
-          <CheckButton label="저장하기" validate={checkAll} run={save} keep />
+          <CheckButton key="save" label="저장하기" validate={checkAll} run={save} keep />
         )}
       </div>
     </>

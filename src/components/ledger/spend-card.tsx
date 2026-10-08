@@ -30,6 +30,8 @@ export function SpendCard({
     const dir = entering.current;
     entering.current = 0;
     if (!el || !dir || reduced() || !el.animate) return;
+    // 나가는 움직임은 끝 모습(투명)을 붙잡고 있으므로 먼저 지운다
+    el.getAnimations().forEach((a) => a.cancel());
     el.animate([{ transform: `translateX(${dir * 60}%)`, opacity: 0 }, { transform: "none", opacity: 1 }],
       { duration: 320, easing: "cubic-bezier(.2,.8,.2,1)" });
   }, [nav.label]);
@@ -49,6 +51,11 @@ export function SpendCard({
     const el = slide.current;
     if (el) el.style.transform = "";
   }
+  /** 끌기를 끝낸다. 뗀 바로 뒤의 클릭만 막고, 그 뒤 키보드로 링크를 여는 것은 막지 않는다. */
+  function release() {
+    drag.current = null;
+    window.setTimeout(() => { dragged.current = false; }, 0);
+  }
 
   return (
     <section
@@ -59,12 +66,16 @@ export function SpendCard({
       onPointerMove={(e) => {
         const d = drag.current;
         if (!d) return;
+        // 카드 밖에서 마우스를 뗐으면 끌기를 끝낸다
+        if (e.pointerType === "mouse" && e.buttons === 0) { release(); bounce(); return; }
         const dx = e.clientX - d.x;
         if (!d.on) {
           if (Math.abs(dx) < 8) return;
           if (Math.abs(e.clientY - d.y) > Math.abs(dx)) { drag.current = null; return; }
           d.on = true;
           dragged.current = true;
+          // 끌기가 시작된 뒤에만 잡는다(그냥 누른 링크는 그대로 열리게)
+          e.currentTarget.setPointerCapture?.(e.pointerId);
         }
         // 갈 수 없는 쪽(다음 달이 없을 때)은 살짝만 끌린다
         d.dx = dx < 0 && !nav.next ? dx * 0.25 : dx;
@@ -72,13 +83,14 @@ export function SpendCard({
       }}
       onPointerUp={() => {
         const d = drag.current;
-        drag.current = null;
+        release();
         if (!d?.on) return;
         if (d.dx > 60) go(-1);
         else if (d.dx < -60 && nav.next) go(1);
         else bounce();
       }}
-      onPointerCancel={() => { drag.current = null; bounce(); }}
+      onPointerCancel={() => { release(); bounce(); }}
+      onLostPointerCapture={() => { if (drag.current) { release(); bounce(); } }}
     >
       <div ref={slide} className="spend-slide">
         <div className="grid grid-cols-[4rem_1fr_4rem] items-center text-[13px]">
@@ -89,7 +101,7 @@ export function SpendCard({
             : <span aria-hidden />}
         </div>
         <div className="spend" data-level={view?.level ?? "none"}>
-          {limit !== null && <p className="spend-limit">한도 {koWon(limit)}원 중</p>}
+          {view && limit && <p className="spend-limit">한도 {koWon(limit)}원 중</p>}
           <p data-testid="family-total" className="spend-total tabular truncate whitespace-nowrap">
             <b>{formatWon(total)}원</b> 썼어요
           </p>

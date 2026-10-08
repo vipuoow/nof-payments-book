@@ -65,5 +65,8 @@ export function limitView(spent: number, limit: number) {
     : rest > 0 ? "거의 다 썼어요"
       : rest === 0 ? "다 썼어요"
         : ratio < 1.3 ? "우리 다음 달을 생각해요" : "슬픈 결제일이 될 것 같아요";
-  return { level, label, fill: Math.min(1, Math.max(0, ratio)), tight: ratio > 0.7 };
+  const fill = Math.min(1, Math.max(0, ratio));
+  // 남은 칸이 글자보다 좁으면(긴 금액) 글자를 막대 안쪽으로. 폭은 휴대폰 막대(약 340px)·글자 약 7px로 어림한다.
+  const need = (label.length * 7 + 24) / 340;
+  return { level, label, fill, tight: ratio > 0.7 || 1 - fill < need };
 }
