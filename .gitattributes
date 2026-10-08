@@ -1,0 +1,9 @@
+# Mac·Windows(WSL) 어디서 작업해도 줄바꿈은 LF로 저장한다(셸 스크립트가 CRLF면 실행되지 않는다)
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.mp4 binary
+*.ico binary
+*.shortcut binary
+*.dump binary

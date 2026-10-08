@@ -12,7 +12,9 @@
     "secrets:scan": "gitleaks git --redact .",
     "operator:grant": "node --env-file=.env.local scripts/grant-operator.ts",
     "test:e2e": "playwright test",
-    "test:deploy": "sh tests/deploy/backup.test.sh && sh tests/deploy/compose.test.sh"
+    "test:deploy": "sh tests/deploy/backup.test.sh && sh tests/deploy/compose.test.sh",
+    "dev:setup": "sh scripts/setup-dev.sh",
+    "dev:doctor": "sh scripts/doctor.sh"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -31,6 +33,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.7",
+    "supabase": "2.119.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vite": "^8.3.1",

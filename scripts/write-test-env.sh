@@ -1,7 +1,8 @@
 #!/bin/sh
 # 로컬 Supabase 접속값을 .env.test.local에 기록한다. (로컬 전용 키, 커밋 금지)
 set -e
-eval "$(supabase status -o env)"
+# 프로젝트에 고정한 Supabase CLI(package.json)를 쓴다
+eval "$(pnpm exec supabase status -o env 2>/dev/null)"
 cat > .env.test.local <<ENV
 SUPABASE_URL=$API_URL
 SUPABASE_ANON_KEY=$ANON_KEY

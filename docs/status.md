@@ -81,19 +81,38 @@ sudo docker exec -e RUN_ONCE=1 nof-ledger_backup_1 sh /backup.sh                
 
 ## 4. 다른 컴퓨터(집)에서 이어서 하기
 
-### 4.1 개발 환경
+### 4.1 개발 환경 (Mac · Windows WSL2 공통)
+
+두 컴퓨터가 같은 버전을 쓰도록 저장소에 고정해 두었다: Node는 `.node-version`(26.7.0), pnpm은 `package.json`의 `packageManager`, Supabase CLI는 개발 의존성(2.119.0, `pnpm exec supabase`), gitleaks는 `scripts/setup-dev.sh`(8.30.1). 줄바꿈은 `.gitattributes`로 LF 고정.
+
+- `pnpm dev:setup`: 설치 → 로컬 Supabase 시작·마이그레이션 → 환경 파일 → webkit → 점검. 여러 번 실행해도 된다. `sh scripts/setup-dev.sh --test`는 테스트까지.
+- `pnpm dev:doctor`: 버전·필수 파일 점검만(✅ 맞음 · ⚠️ 없어도 개발은 됨 · ❌ 고쳐야 함).
+
+**Mac**
 
 ```sh
+brew install node git    # node 버전이 .node-version과 다르면 fnm 사용
 git clone https://github.com/vipuoow/nof-payments-book.git && cd nof-payments-book
-corepack enable && pnpm install
-git config core.hooksPath .githooks        # 커밋 전 비밀값 검사(gitleaks 필요)
-brew install supabase/tap/supabase gitleaks
 # Docker Desktop 실행 후
-supabase start
-./scripts/write-test-env.sh && cp .env.test.local .env.local
-pnpm exec playwright install webkit
-pnpm test && pnpm test:db && pnpm test:e2e  # 모두 통과하면 준비 끝
+sh scripts/setup-dev.sh --test
 ```
+
+**Windows (집): WSL2 Ubuntu 안에서 개발한다.** PowerShell·`C:` 드라이브에서 하지 않는다(스크립트·줄바꿈·속도 문제).
+
+1. Docker Desktop › Settings › Resources › WSL integration에서 쓰는 Ubuntu를 켠다(General의 "Use the WSL 2 based engine"도 켬).
+2. Ubuntu 터미널에서:
+
+```sh
+sudo apt update && sudo apt install -y git curl unzip
+curl -fsSL https://fnm.vercel.app/install | bash && exec $SHELL   # Node 버전 관리(.node-version을 읽는다)
+mkdir -p ~/dev && cd ~/dev                                          # /mnt/c 아래에 두지 않는다
+git clone https://github.com/vipuoow/nof-payments-book.git && cd nof-payments-book
+git config --global core.autocrlf input
+sh scripts/setup-dev.sh --test     # webkit 라이브러리 설치 때 sudo 비밀번호를 물을 수 있다
+```
+
+3. 브라우저는 Windows 쪽에서 `http://127.0.0.1:3100`(앱), Supabase Studio는 `http://127.0.0.1:54323`으로 열린다(WSL2가 주소를 Windows와 공유).
+4. 편집기는 VS Code + "WSL" 확장으로 Ubuntu 안의 폴더를 연다. Claude Code도 Ubuntu 터미널에서 실행한다.
 
 ### 4.2 git에 없는 파일 (직접 옮기거나 다시 만든다)
 
@@ -102,7 +121,7 @@ GitHub로 옮기지 않는다. 필요한 컴퓨터에서 다시 만들거나 안
 | 파일 | 용도 | 없을 때 |
 |---|---|---|
 | `supabase/.env` | 로컬 Google 로그인(OAuth 클라이언트 ID·비밀값) | 로컬에서 Google 로그인 불가. 테스트는 통과 |
-| `~/.config/typesafe/api_key`(600) + `~/.zshenv`의 `TYPESAFE_API_KEY` 줄 | jev 분류 | 분류를 건너뜀(앱은 정상) |
+| `~/.config/typesafe/api_key`(600) + 셸 설정(Mac `~/.zshenv`, WSL `~/.bashrc`)의 `TYPESAFE_API_KEY` 줄 | jev 분류 | 분류를 건너뜀(앱은 정상) |
 | (클라우드 접속값) | 운영자 지정 스크립트 등 | Mac에 두지 않는다. NAS `.env`에서 그때그때 읽는다(`docs/deploy/README.md` 8절) |
 | `~/.ssh/nof_nas` + `~/.ssh/config`의 NAS 항목 | NAS SSH 키 로그인 | 4.3대로 그 컴퓨터에서 새 키를 만들어 등록 |
 
@@ -110,7 +129,7 @@ GitHub로 옮기지 않는다. 필요한 컴퓨터에서 다시 만들거나 안
 
 ### 4.3 NAS 원격 관리(다른 컴퓨터에서)
 
-1. 그 컴퓨터에 Tailscale을 설치하고 같은 계정으로 로그인한다(관리 화면에서 NAS가 보이는지 확인, NAS는 키 만료 끔).
+1. 그 컴퓨터에 Tailscale을 설치하고 같은 계정으로 로그인한다(관리 화면에서 NAS가 보이는지 확인, NAS는 키 만료 끔). Windows는 Windows용 Tailscale을 설치하면 WSL 안에서도 NAS에 닿는다(안 닿으면 WSL 안에도 Tailscale 설치). 아래 SSH 단계는 WSL Ubuntu 안에서 한다.
 2. 새 SSH 키를 만든다: `ssh-keygen -t ed25519 -f ~/.ssh/nof_nas -N ""`
 3. 공개키를 NAS 관리용 계정의 `~/.ssh/authorized_keys`에 추가한다(처음 한 번은 그 계정 비밀번호로 `ssh-copy-id -i ~/.ssh/nof_nas.pub <계정>@<NAS Tailscale 주소>`).
 4. `~/.ssh/config`에 `Host nof-nas`(HostName = NAS Tailscale 주소, User, IdentityFile ~/.ssh/nof_nas, IdentitiesOnly yes)를 넣고 `ssh nof-nas`로 확인한다.
@@ -118,7 +137,7 @@ GitHub로 옮기지 않는다. 필요한 컴퓨터에서 다시 만들거나 안
 
 ### 4.4 Claude와 이어서 작업할 때 (작업 원칙)
 
-Claude Code의 메모리는 컴퓨터마다 따로라 아래 원칙을 새 대화 시작 때 알려 준다(또는 이 문서를 읽게 한다).
+Claude Code의 메모리는 컴퓨터마다 따로라 아래 원칙을 새 대화 시작 때 알려 준다(또는 이 문서를 읽게 한다). Mac의 메모리 폴더(`~/.claude/projects/<작업 폴더 이름>/memory/`)를 직접 복사해 가도 된다(가계부 주소 등이 들어 있어 GitHub에는 올리지 않는다).
 
 - 모든 답변은 한국어로.
 - 무엇이든 실행하기 전에 단계별로 승인받는다. 상태 확인(읽기)과 변경을 구분한다. 커밋·push도 승인 후.
