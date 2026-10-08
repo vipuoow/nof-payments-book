@@ -189,8 +189,13 @@ Claude Code의 메모리는 컴퓨터마다 따로라 아래 원칙을 새 대�
 
 **남은 일(순서대로)**
 1. `git pull` 후 `pnpm dev:setup`(새 마이그레이션 `20261008030000_profile_theme`이 로컬에 적용된다).
-2. 별도 검토: 이 Mac에서 검토를 돌리던 중 집으로 옮김 → 집에서 Claude에게 "f6d48ff..HEAD 별도 검토"를 다시 맡긴다. 검토에서 볼 곳은 설계서와 위 변경(쿠키·루트 레이아웃, 한도 카드 밀기, 체크 버튼 두 번 저장, 테마 색 대비).
-3. 지적 사항 고치기 → 전체 테스트.
+2. 별도 검토는 끝났다(f6d48ff..1d11607). 아래 지적 사항을 각각 실패하는 테스트부터 써서 고친다.
+   - **심각** 한도 카드를 밀어 달을 바꾸면 카드가 들어왔다가 사라진다: 나가는 움직임(`fill: "forwards"`)을 취소하지 않아서. 들어오는 효과 시작 때 `el.getAnimations().forEach(a => a.cancel())` (`src/components/ledger/spend-card.tsx`)
+   - **중요** 전체 한도를 0으로 지우면 "한도 원 중"이 보인다: `page.tsx`에서 한도가 0 이하면 `null`로 넘긴다
+   - **중요** Enter 키가 체크 버튼의 두 번 누르기 막음을 거치지 않는다(`tx-detail.tsx`의 `onSubmit`, `add-flow.tsx`의 `next`) → Enter도 같은 버튼 경로로
+   - **중요** 마우스로 한도 카드를 끌다 카드 밖에서 놓으면 계속 끌린다 → `setPointerCapture` + `e.buttons === 0`이면 무시 + `onLostPointerCapture`에서 되돌리기
+   - 작은 것: 끈 뒤 키보드로 달 링크 Enter가 막힘(`dragged`를 pointerup 뒤 초기화) · 저장 전 화면 읽기가 "완료"라고 읽음(`aria-busy`) · `createTx` 네트워크 오류 때 안내 없음 · add-flow의 두 체크 버튼에 `key` · tx-detail에서 항목 저장 중 온누리 체크가 눌림 · `/auth/no-profile` 로그아웃 때 `theme` 쿠키 안 지움 · 어둡게 모드 빨강 막대 위 흰 글자 대비 약함, 긴 금액 글자가 색 막대와 겹침 · 취소가 더 커서 쓴 돈이 음수일 때 `limitView` 테스트 없음
+3. 고친 뒤 전체 테스트(단위·DB·화면·lint·tsc·새 DB 확인).
 4. 배포 v1.4.0: 운영 DB 백업 → `20261008030000` 미리 보기·적용 → 태그 → NAS 교체 → `/api/health` 확인(4절·`docs/deploy/README.md`).
 5. Notion 진행 상황 정리. "설정 따라하기" 페이지는 만들어 둠(결제문자 가지고놀기 아래).
 
