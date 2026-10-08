@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { APPROVAL } from "@/parsers/__fixtures__/kb-card";
 import { ingestMessage } from "@/ingest/service";
 import { adminClient } from "../tests/helpers/db";
-import { at, kstStamp, signIn, readyGroupFixture } from "./support";
+import { at, detailField, kstStamp, signIn, readyGroupFixture } from "./support";
 
 const db = adminClient();
 
@@ -25,17 +25,19 @@ test("기본 숨기기, 우리 카테고리 추가·이름 바꾸기·삭제가 
   await expect(page.getByTestId("group-category")).toHaveCount(1);
 
   await page.goto(`/?tx=${r.transactionId}`);
-  const sheet = page.getByRole("dialog", { name: "거래 수정" });
-  await expect(sheet.getByRole("button", { name: "문화", exact: true })).toHaveCount(0);
-  await sheet.getByRole("button", { name: "반려동물", exact: true }).click();
-  await expect(page.getByTestId("tx-row").first()).toContainText("반려동물");
+  await detailField(page, "분류").click();
+  // 숨긴 기본 카테고리는 고를 수 없다
+  await expect(page.getByRole("region", { name: "분류 고치기" }).getByRole("button", { name: "문화", exact: true })).toHaveCount(0);
+  await page.getByRole("region", { name: "분류 고치기" }).getByRole("button", { name: "반려동물", exact: true }).click();
+  await page.getByRole("region", { name: "분류 고치기" }).getByRole("button", { name: "확인" }).click();
+  await expect(detailField(page, "분류")).toContainText("반려동물");
 
   await page.goto("/categories");
   await page.getByLabel("반려동물 새 이름").fill("펫");
   await page.getByTestId("group-category").getByRole("button", { name: "저장" }).click();
   await expect(page.getByLabel("펫 새 이름")).toBeVisible();
 
-  // 규칙이 생겼고(거래 시트에서 고름), 카테고리를 지우면 거래는 미지정·규칙도 삭제
+  // 규칙이 생겼고(거래 상세에서 고름), 카테고리를 지우면 거래는 미지정·규칙도 삭제
   await expect(page.getByTestId("rule")).toContainText("펫");
   await page.getByTestId("group-category").getByRole("button", { name: "삭제" }).click();
   await expect(page.getByTestId("group-category")).toHaveCount(0);

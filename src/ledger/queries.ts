@@ -12,7 +12,6 @@ export type MonthData = {
   categoryNames: Map<string, string>;
   categoryChoices: CategoryLite[];
   cancelledIds: Set<string>;
-  unparsedCount: number;
   budgets: Map<string, number>;
   warnRatio: number;
   /** 그룹이 숨긴 기본 카테고리 */
@@ -84,7 +83,7 @@ export async function loadBudgets(db: SupabaseClient, month: Month): Promise<Map
 
 export async function loadMonth(db: SupabaseClient, groupId: string, month: Month): Promise<MonthData> {
   const { from, to } = monthRange(month);
-  const [rows, members, categories, unparsed, budgets, warn] = await Promise.all([
+  const [rows, members, categories, budgets, warn] = await Promise.all([
     must<TxRow[]>(
       db.from("transactions").select(TX_COLUMNS)
         .gte("occurred_at", from.toISOString()).lt("occurred_at", to.toISOString())
@@ -92,11 +91,9 @@ export async function loadMonth(db: SupabaseClient, groupId: string, month: Mont
     ),
     loadMembers(db, groupId),
     loadCategories(db),
-    db.from("raw_messages").select("id", { count: "exact", head: true }).eq("status", "unparsed"),
     loadBudgets(db, month),
     db.from("app_settings").select("value").eq("key", "budget_warning_ratio").single(),
   ]);
-  if (unparsed.error) throw unparsed.error;
   if (warn.error) throw warn.error;
 
   const txs = rows.map(toLedgerTx);
@@ -115,27 +112,15 @@ export async function loadMonth(db: SupabaseClient, groupId: string, month: Mont
     categoryNames: categories.names,
     categoryChoices: categories.choices,
     cancelledIds: new Set(cancelled.map((c) => c.cancels_transaction_id)),
-    unparsedCount: unparsed.count ?? 0,
     budgets,
     warnRatio: Number(warn.data.value),
     hiddenIds: categories.hiddenIds,
   };
 }
 
-/** 거래 하나와 마스킹된 원문. 내 그룹 것이 아니면(RLS) null. */
-export async function loadTransaction(db: SupabaseClient, id: string) {
-  const { data, error } = await db.from("transactions")
-    .select(`${TX_COLUMNS}, raw_messages(body)`).eq("id", id).maybeSingle();
-  if (error) throw error;
-  if (!data) return null;
-  const raw = (data as unknown as { raw_messages: { body: string } | null }).raw_messages;
-  return { tx: toLedgerTx(data as unknown as TxRow), rawBody: raw?.body ?? null };
-}
-
-/** 미분류 문자 하나. 내 그룹의 unparsed가 아니면 null. */
-export async function loadRawMessage(db: SupabaseClient, id: string) {
-  const { data, error } = await db.from("raw_messages")
-    .select("id, body, user_id, received_at").eq("id", id).eq("status", "unparsed").maybeSingle();
-  if (error) throw error;
-  return data ? { id: data.id, body: data.body, userId: data.user_id, receivedAt: new Date(data.received_at) } : null;
+/** 확인할 문자(가계부가 못 읽은 문자) 전부, 최근 것부터 */
+export async function loadUnparsed(db: SupabaseClient) {
+  return must<{ id: string; body: string; user_id: string; received_at: string }[]>(
+    db.from("raw_messages").select("id, body, user_id, received_at").eq("status", "unparsed").order("received_at", { ascending: false }),
+  );
 }

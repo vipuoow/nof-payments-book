@@ -1,4 +1,4 @@
-import type { BrowserContext } from "@playwright/test";
+import { expect, type BrowserContext, type Page } from "@playwright/test";
 import { createServerClient } from "@supabase/ssr";
 import { PASSWORD, adminClient, createGroupFixture, type GroupFixture } from "../tests/helpers/db";
 
@@ -52,4 +52,17 @@ export async function readyGroupFixture(label: string): Promise<GroupFixture> {
   });
   await db.from("budgets").insert({ group_id: g.groupId, category_id: null, month: "2000-01-01", amount: 100_000_000 });
   return g;
+}
+
+/** 거래 상세의 한 항목 줄(금액·어디서·분류·언제·누가) */
+export const detailField = (page: Page, label: string) =>
+  page.getByRole("dialog", { name: "거래 상세" }).locator(".lx-field").filter({ hasText: label });
+
+/** 열린 거래 상세에서 분류를 고른다: 분류 → 고르기 → 확인 */
+export async function pickCategory(page: Page, name: string) {
+  await detailField(page, "분류").click();
+  const step = page.getByRole("region", { name: "분류 고치기" });
+  await step.getByRole("button", { name, exact: true }).click();
+  await step.getByRole("button", { name: "확인" }).click();
+  await expect(step).toHaveCount(0);
 }

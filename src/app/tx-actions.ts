@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect, RedirectType } from "next/navigation";
-import { safeNextPath } from "@/auth/paths";
-import { isUuid, parseTxForm } from "@/ledger/forms";
 import { kstMonthOf, monthParam } from "@/ledger/month";
+import {
+  createManualTx, deleteManualTx, editTx, FAIL, ignoreRaw, setOnnuri,
+  type EditResult, type NewTx, type TxPatch,
+} from "@/ledger/tx-edit";
 import { loadMe } from "@/lib/session";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
@@ -13,99 +14,39 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
  */
 export type ActionState = { error?: string; values?: Record<string, string> } | null;
 
-const FAIL = "저장하지 못했습니다. 다시 시도해 주세요.";
-const text = (formData: FormData, name: string) => String(formData.get(name) ?? "");
-/** React 내부 필드($ACTION_…)를 뺀 입력값 */
-const valuesOf = (formData: FormData) =>
-  Object.fromEntries([...formData.entries()].filter(([k, v]) => !k.startsWith("$") && typeof v === "string")) as Record<string, string>;
+// 홈의 겹쳐 뜨는 화면(상세·새로 추가·확인할 문자)이 부른다. 이동하지 않고 결과만 돌려주면
+// 화면이 움직임을 마친 뒤 router.refresh()로 새 값을 받는다.
 
-/** 카테고리 버튼: 규칙 학습·같은 달 일괄 적용은 DB 함수가 한다. */
-export async function setCategoryAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("set_transaction_category", {
-    p_transaction: text(formData, "txId"),
-    p_category: text(formData, "categoryId") || null,
-  });
-  if (error) return { error: FAIL };
-  revalidatePath("/");
-  redirect(safeNextPath(text(formData, "returnTo")), RedirectType.replace);
+export async function updateTxField(txId: string, patch: TxPatch): Promise<EditResult> {
+  const r = await editTx(await createSupabaseServerClient(), txId, patch);
+  if (r.ok) revalidatePath("/");
+  return r;
 }
 
-/** 온누리상품권 결제 표시를 켜고 끈다(카드 대금 미청구, 쓴 돈에는 그대로) */
-export async function setOnnuriAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("transactions")
-    .update({ paid_with: formData.get("onnuri") === "on" ? "onnuri" : null })
-    .eq("id", text(formData, "txId"))
-    .select("id");
-  // 없는 거래나 다른 그룹 거래는 바뀐 행이 0개다
-  if (error || !data?.length) return { error: FAIL };
-  revalidatePath("/");
-  redirect(safeNextPath(text(formData, "returnTo")), RedirectType.replace);
+export async function setOnnuriPaid(txId: string, on: boolean): Promise<EditResult> {
+  const r = await setOnnuri(await createSupabaseServerClient(), txId, on);
+  if (r.ok) revalidatePath("/");
+  return r;
 }
 
-/** 더 보기: 금액·가맹점·일시·사람·메모. 취소 거래는 음수를 유지한다. */
-export async function updateTxAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = parseTxForm((name) => text(formData, name));
-  if (!parsed.ok) return { error: parsed.error, values: valuesOf(formData) };
-  const supabase = await createSupabaseServerClient();
-  const txId = text(formData, "txId");
-  const { data: current } = await supabase.from("transactions").select("kind").eq("id", txId).maybeSingle();
-  if (!current) return { error: FAIL, values: valuesOf(formData) };
-  const v = parsed.value;
-  const { error } = await supabase.from("transactions").update({
-    amount: current.kind === "cancel" ? -v.amount : v.amount,
-    merchant: v.merchant,
-    occurred_at: v.occurredAt.toISOString(),
-    user_id: v.userId,
-    memo: v.memo,
-  }).eq("id", txId);
-  if (error) return { error: FAIL, values: valuesOf(formData) };
-  revalidatePath("/");
-  redirect(safeNextPath(text(formData, "returnTo")), RedirectType.replace);
+export async function deleteTx(txId: string): Promise<EditResult> {
+  const r = await deleteManualTx(await createSupabaseServerClient(), txId);
+  if (r.ok) revalidatePath("/");
+  return r;
 }
 
-/** 수동 입력 거래만 삭제한다. */
-export async function deleteTxAction(txId: string, returnTo: string): Promise<ActionState> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("transactions").delete()
-    .eq("id", txId).eq("kind", "manual").select("id");
-  if (error || data.length === 0) return { error: FAIL };
-  revalidatePath("/");
-  redirect(safeNextPath(returnTo), RedirectType.replace);
-}
-
-/** 수동 입력. 미분류 문자에서 왔으면(rawId) 저장 뒤 문자 상태를 parsed로 바꾼다. */
-export async function createTxAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = parseTxForm((name) => text(formData, name));
-  if (!parsed.ok) return { error: parsed.error, values: valuesOf(formData) };
+/** 저장한 거래의 id와 그 달(`YYYY-MM`). 화면은 그 달로 옮겨 가 새 줄로 빨려 들어간다. */
+export async function createTx(input: NewTx): Promise<{ ok: true; id: string; month: string } | { ok: false; error: string }> {
   const { supabase, me } = await loadMe();
-  if (!me.groupId) return { error: FAIL, values: valuesOf(formData) };
-  const v = parsed.value;
-  const rawId = text(formData, "rawId");
-  if (isUuid(rawId)) {
-    const { data: raw } = await supabase.from("raw_messages").select("id").eq("id", rawId).eq("status", "unparsed").maybeSingle();
-    if (!raw) return { error: "이미 처리된 문자입니다.", values: valuesOf(formData) };
-  }
-  const { error } = await supabase.from("transactions").insert({
-    group_id: me.groupId,
-    user_id: v.userId,
-    kind: "manual",
-    amount: v.amount,
-    merchant: v.merchant,
-    occurred_at: v.occurredAt.toISOString(),
-    category_id: v.categoryId,
-    memo: v.memo,
-  });
-  if (error) return { error: FAIL, values: valuesOf(formData) };
-
-  if (isUuid(rawId)) {
-    // 실패해도 거래는 이미 저장됐다. 문자가 목록에 남으면 사용자가 무시할 수 있다.
-    const { error: rawError } = await supabase.from("raw_messages").update({ status: "parsed" })
-      .eq("id", rawId).eq("status", "unparsed");
-    if (rawError) console.warn(`[unparsed] 문자 ${rawId} 상태 변경 실패: ${rawError.message}`);
-  }
+  if (!me.groupId) return { ok: false, error: FAIL };
+  const r = await createManualTx(supabase, me.groupId, input);
+  if (!r.ok) return r;
   revalidatePath("/");
-  revalidatePath("/unparsed");
-  redirect(`/?month=${monthParam(kstMonthOf(v.occurredAt))}`, RedirectType.replace);
+  return { ok: true, id: r.id, month: monthParam(kstMonthOf(r.occurredAt)) };
+}
+
+export async function ignoreRawMessage(rawId: string): Promise<EditResult> {
+  const r = await ignoreRaw(await createSupabaseServerClient(), rawId);
+  if (r.ok) revalidatePath("/");
+  return r;
 }

@@ -1,14 +1,15 @@
-import Link from "next/link";
 import { AppMenu } from "@/components/app-menu";
 import { BudgetSummary } from "@/components/ledger/budget-summary";
 import { spentByCategory } from "@/ledger/budget";
-import { DayList } from "@/components/ledger/day-list";
+import { AddButton } from "@/components/ledger/add-button";
+import { HomeLedger } from "@/components/ledger/home-ledger";
+import type { DayView, RawView } from "@/components/ledger/home-types";
 import { MonthSummary } from "@/components/ledger/month-summary";
-import { TxSheet } from "@/components/ledger/tx-sheet";
 import { NoGroup } from "@/components/no-group";
-import { isUuid } from "@/ledger/forms";
-import { compareMonth, kstMonthOf, monthParam, parseMonthParam } from "@/ledger/month";
-import { loadMonth, loadTransaction } from "@/ledger/queries";
+import { issuerLabel, paidWithOf } from "@/ledger/issuer";
+import { compareMonth, kstLocalValue, kstMonthOf, monthParam, parseMonthParam } from "@/ledger/month";
+import { loadMonth, loadUnparsed } from "@/ledger/queries";
+import { guessFromSms } from "@/ledger/sms-guess";
 import { groupByDay, totals } from "@/ledger/summary";
 import { ConnectPrompt } from "@/components/home/connect-prompt";
 import { EmptyCheer } from "@/components/home/empty-cheer";
@@ -25,16 +26,10 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const setup = await loadSetup(supabase);
   const stage = homeStage(setup);
   const showPartner = me.role === "owner" && setup.memberCount < 2;
-  const header = (
-    <header className="flex items-center justify-between py-3">
-      <AppMenu me={me} showPartner={showPartner} />
-      <Link href="/new" aria-label="직접 입력" className="px-2 text-2xl text-accent">+</Link>
-    </header>
-  );
   if (stage !== "home") {
     return (
       <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col px-4 pb-6">
-        {header}
+        <header className="flex items-center py-3"><AppMenu me={me} showPartner={showPartner} /></header>
         {stage === "connect"
           ? <ConnectPrompt />
           : <LimitSetup connectedName={setup.connectedName} />}
@@ -43,41 +38,54 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   }
   const now = new Date();
   const month = parseMonthParam(sp.month, now);
-  const data = await loadMonth(supabase, me.groupId, month);
+  const [data, unparsed] = await Promise.all([loadMonth(supabase, me.groupId, month), loadUnparsed(supabase)]);
   const sum = totals(data.txs, data.members);
-  const base = `/?month=${monthParam(month)}`;
-  const selected = isUuid(sp.tx) ? await loadTransaction(supabase, sp.tx) : null;
+  const byId = new Map(data.txs.map((t) => [t.id, t]));
+  const days: DayView[] = groupByDay(data.txs).map((g) => ({
+    key: g.key,
+    label: g.label,
+    total: g.items.reduce((s, t) => s + t.amount, 0),
+    items: g.items.map((t) => ({
+      id: t.id, userId: t.userId, kind: t.kind, amount: t.amount, merchant: t.merchant, occurredAt: t.occurredAt.toISOString(),
+      categoryId: t.categoryId, categorySource: t.categorySource, cancelled: data.cancelledIds.has(t.id), paidWith: t.paidWith ?? null,
+      card: issuerLabel(t.issuer ?? null, t.kind, paidWithOf(t, byId)),
+    })),
+  }));
+  const raws: RawView[] = unparsed.map((r) => {
+    const g = guessFromSms(r.body, new Date(r.received_at));
+    return {
+      id: r.id, body: r.body, userId: r.user_id, receivedAt: r.received_at,
+      guess: { amount: g.amount, merchant: g.merchant, occurredAt: g.occurredAt ? kstLocalValue(g.occurredAt) : undefined },
+    };
+  });
 
   return (
     <main className="mx-auto w-full max-w-[480px] px-4 pb-24">
-      {header}
+      <header className="flex items-center justify-between py-3">
+        <AppMenu me={me} showPartner={showPartner} />
+        <AddButton month={monthParam(month)} />
+      </header>
       {!setup.meConnected && <NotConnectedBanner />}
       <div className="card">
-      <MonthSummary month={month} now={now} total={sum.total} byMember={sum.byMember} />
-      <BudgetSummary
-        budgets={data.budgets}
-        spentTotal={sum.total}
-        spentByCategory={spentByCategory(data.txs)}
-        categoryNames={data.categoryNames}
-        warnRatio={data.warnRatio}
-        hiddenIds={data.hiddenIds}
-      />
+        <MonthSummary month={month} now={now} total={sum.total} byMember={sum.byMember} />
+        <BudgetSummary
+          budgets={data.budgets}
+          spentTotal={sum.total}
+          spentByCategory={spentByCategory(data.txs)}
+          categoryNames={data.categoryNames}
+          warnRatio={data.warnRatio}
+          hiddenIds={data.hiddenIds}
+        />
       </div>
-      {data.unparsedCount > 0 && (
-        <Link href="/unparsed" className="mt-3 flex justify-between rounded-2xl bg-accent-soft px-4 py-3 text-sm font-semibold text-accent">
-          <span>확인할 문자가 {data.unparsedCount}건 있어요</span><span>›</span>
-        </Link>
-      )}
-      {data.txs.length === 0 && compareMonth(month, kstMonthOf(now)) === 0 ? <EmptyCheer /> : <DayList
-        groups={groupByDay(data.txs)}
-        base={base}
-        categoryNames={data.categoryNames}
-        memberNames={new Map(data.members.map((m) => [m.userId, m.name]))}
-        cancelledIds={data.cancelledIds}
-      />}
-      {selected && (
-        <TxSheet tx={selected.tx} rawBody={selected.rawBody} choices={data.categoryChoices} members={data.members} closeHref={base} />
-      )}
+      <HomeLedger
+        days={days}
+        month={monthParam(month)}
+        choices={{ categories: data.categoryChoices, categoryNames: Object.fromEntries(data.categoryNames), members: data.members }}
+        meId={me.userId}
+        raws={raws}
+        nowIso={now.toISOString()}
+        empty={data.txs.length === 0 && compareMonth(month, kstMonthOf(now)) === 0 ? <EmptyCheer /> : null}
+      />
     </main>
   );
 }

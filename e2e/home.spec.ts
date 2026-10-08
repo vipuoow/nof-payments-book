@@ -27,7 +27,7 @@ test("이번 달 합계·사람별 합계·날짜별 거래와 미분류 줄을 
   await expect(page.getByTestId("tx-time").first()).toHaveText(kstStamp(1).slice(-5));
   // 금액 아래에 쓴 카드
   await expect(page.getByTestId("tx-card").first()).toHaveText("국민카드");
-  await expect(page.getByRole("link", { name: /확인할 문자가 1건 있어요/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /확인할 문자가 1건 있어요/ })).toBeVisible();
 
   // 지난달로 가면 거래가 없고, 이번 달 이후로는 갈 수 없다
   await expect(page.getByRole("link", { name: "다음 달" })).toHaveCount(0);
@@ -38,7 +38,7 @@ test("이번 달 합계·사람별 합계·날짜별 거래와 미분류 줄을 
   await expect(page.getByRole("link", { name: "다음 달" })).toBeVisible();
 });
 
-test("다른 그룹의 거래 id를 주소에 넣어도 시트가 열리지 않는다", async ({ page, context }) => {
+test("다른 그룹의 거래 id를 주소에 넣어도 상세가 열리지 않는다", async ({ page, context }) => {
   const mine = await readyGroupFixture("e2e-home-mine");
   const other = await readyGroupFixture("e2e-home-other");
   const r = await send(other, "owner", at(APPROVAL, kstStamp(3)));
