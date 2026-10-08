@@ -6,7 +6,7 @@ import { CheckMark, checkThen } from "./check-button";
 type Pick = "paste" | "direct";
 
 /**
- * 새로 추가 맨 앞: 카드 문자 붙여넣기 / 직접 적기(좌우로 나란히).
+ * 새로 추가 맨 앞: 결제문자 붙여넣기 / 직접 입력(좌우로 나란히).
  * 고르면 그 카드가 ✓로 바뀌며 빛이 은은하게 퍼진 뒤 넘어간다(입력 끝내기와 같은 움직임).
  */
 export function AddChoice({ onPaste, onDirect }: { onPaste: () => void; onDirect: () => void }) {
@@ -31,14 +31,34 @@ export function AddChoice({ onPaste, onDirect }: { onPaste: () => void; onDirect
   );
 
   return (
-    <div className="lx-q">
+    <div className="lx-q add-choose">
       <h2>어떻게 적을까요?</h2>
-      <div className="mt-2 grid w-full grid-cols-2 gap-2.5">
-        {card("paste", "카드 문자 붙여넣기", "받은 결제 문자를 붙여 넣으면 알아서 채워요",
-          <svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2.5" /><path d="M9.5 4.5V3.8c0-.4.3-.8.8-.8h3.4c.5 0 .8.4.8.8v.7M9 10h6M9 13.5h6M9 17h3.5" /></svg>)}
-        {card("direct", "직접 적기", "금액부터 하나씩 적어요",
-          <svg viewBox="0 0 24 24"><path d="M5 19l1-4L15.5 5.5a2.1 2.1 0 013 3L9 18l-4 1zM13.5 7.5l3 3" /></svg>)}
+      <div className="grid w-full grid-cols-2 gap-3">
+        {card("paste", "결제문자 붙여넣기", "받은 결제 문자를 붙여 넣으면 알아서 채워요", <PasteIcon />)}
+        {card("direct", "직접 입력", "금액부터 하나씩 적어요", <WriteIcon />)}
       </div>
     </div>
+  );
+}
+
+/* 두 가지 색(옅은 면 + 선)의 아이콘. 선은 강조색, 면은 강조색을 아주 옅게 */
+function PasteIcon() {
+  return (
+    <svg viewBox="0 0 32 32">
+      <path className="ic-fill" d="M7 8.5A3.5 3.5 0 0 1 10.5 5h11A3.5 3.5 0 0 1 25 8.5v8a3.5 3.5 0 0 1-3.5 3.5H15l-5 4v-4h0A3.5 3.5 0 0 1 7 16.5z" />
+      <path d="M7 8.5A3.5 3.5 0 0 1 10.5 5h11A3.5 3.5 0 0 1 25 8.5v8a3.5 3.5 0 0 1-3.5 3.5H15l-5 4v-4h0A3.5 3.5 0 0 1 7 16.5z" />
+      <path d="M11.5 10.5h9M11.5 14.5h5.5" />
+      <path className="ic-spark" d="M26.5 21.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z" />
+    </svg>
+  );
+}
+function WriteIcon() {
+  return (
+    <svg viewBox="0 0 32 32">
+      <path className="ic-fill" d="M20.6 5.9a2.6 2.6 0 0 1 3.7 3.7L12.6 21.3 7.5 23l1.7-5.1z" />
+      <path d="M20.6 5.9a2.6 2.6 0 0 1 3.7 3.7L12.6 21.3 7.5 23l1.7-5.1z" />
+      <path d="M18.6 7.9l3.7 3.7" />
+      <path d="M7 27h18" className="ic-soft" />
+    </svg>
   );
 }

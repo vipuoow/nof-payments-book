@@ -73,7 +73,7 @@ export async function openAdd(page: Page) {
   await page.getByRole("button", { name: "결제 직접 입력" }).click();
 }
 
-/** 열린 새로 추가의 분기에서 [직접 적기] */
+/** 열린 새로 추가의 분기에서 [직접 입력] */
 export async function startDirect(page: Page) {
-  await page.getByRole("dialog", { name: "새로 추가" }).getByRole("button", { name: /직접 적기/ }).click();
+  await page.getByRole("dialog", { name: "새로 추가" }).getByRole("button", { name: /직접 입력/ }).click();
 }

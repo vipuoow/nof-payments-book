@@ -12,7 +12,7 @@ export const PASTE_ERROR = {
 } as const;
 
 /**
- * 새로 추가 › 카드 문자 붙여넣기: 붙여 넣은 글에서 금액·가게·시각을 찾는다(브라우저에서, 원문은 보내지 않음).
+ * 새로 추가 › 결제문자 붙여넣기: 붙여 넣은 글에서 금액·가게·시각을 찾는다(브라우저에서, 원문은 보내지 않음).
  * 국민·현대 분석기가 먼저 읽고, 못 읽으면 문자 짐작으로 찾는다. 취소 문자는 결제로 만들지 않는다.
  */
 export function readPastedSms(text: string, now: Date): PasteRead {

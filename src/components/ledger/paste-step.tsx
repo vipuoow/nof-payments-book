@@ -9,7 +9,7 @@ import { CheckButton } from "./check-button";
 export type PasteFill = { amount: number; merchant?: string; occurredAt?: Date; categoryId: string | undefined };
 const CLIP_FAIL = "입력칸을 길게 눌러 붙여 넣어 주세요.";
 
-/** 카드 문자 붙여넣기: 글을 읽어 채울 값을 넘긴다(원문은 서버로 보내지 않는다) */
+/** 결제문자 붙여넣기: 글을 읽어 채울 값을 넘긴다(원문은 서버로 보내지 않는다) */
 export function PasteStep({ now, onBack, onRead, onDirect }: {
   now: Date; onBack: () => void; onRead: (fill: PasteFill) => void; onDirect: () => void;
 }) {
@@ -47,7 +47,7 @@ export function PasteStep({ now, onBack, onRead, onDirect }: {
     <>
       <div className="lx-bar">
         <button type="button" aria-label="뒤로" className="!text-[22px]" onClick={onBack}>‹</button>
-        <span>카드 문자 붙여넣기</span>
+        <span>결제문자 붙여넣기</span>
         <span className="w-8" />
       </div>
       <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 px-5">
@@ -57,7 +57,7 @@ export function PasteStep({ now, onBack, onRead, onDirect }: {
         />
         <button type="button" onClick={fromClipboard} className="mx-auto px-4 py-2 text-sm font-semibold text-accent">붙여넣기</button>
         {error && <p key={error} role="alert" className="lx-msg text-center text-sm text-danger">{error}</p>}
-        {noAmount && <button type="button" onClick={onDirect} className="mx-auto text-sm text-muted underline">직접 적기</button>}
+        {noAmount && <button type="button" onClick={onDirect} className="mx-auto text-sm text-muted underline">직접 입력</button>}
       </div>
       <div className="lx-cta">
         <CheckButton label="읽기" validate={check} run={read} />

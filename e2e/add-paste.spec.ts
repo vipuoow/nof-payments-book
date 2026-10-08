@@ -60,7 +60,7 @@ test("문자 붙여넣기: 규칙 있는 가게면 마지막 화면까지 채워
   await openAdd(page);
   const add = page.getByRole("dialog", { name: "새로 추가" });
   await expect(add.getByRole("heading", { name: "어떻게 적을까요?" })).toBeVisible();
-  await add.getByRole("button", { name: /카드 문자 붙여넣기/ }).click();
+  await add.getByRole("button", { name: /결제문자 붙여넣기/ }).click();
   await add.getByLabel("결제 문자").fill(kbAt(3));
   await add.getByRole("button", { name: "읽기" }).click();
   await expect(add.getByRole("heading", { name: "다 입력했어요" })).toBeVisible();
@@ -83,7 +83,7 @@ test("규칙이 없는 가게는 분류만 묻는다. 같은 결제가 있으면
   await signIn(context, g.owner.email);
   await page.goto("/?add=1");
   const add = page.getByRole("dialog", { name: "새로 추가" });
-  await add.getByRole("button", { name: /카드 문자 붙여넣기/ }).click();
+  await add.getByRole("button", { name: /결제문자 붙여넣기/ }).click();
   await add.getByLabel("결제 문자").fill(kbAt(3));
   await add.getByRole("button", { name: "읽기" }).click();
   await add.getByRole("button", { name: "식비", exact: true }).click();
@@ -101,7 +101,7 @@ test("금액 없는 글·취소 문자·빈 칸은 안내하고, 금액만 있�
   await signIn(context, g.owner.email);
   await page.goto("/?add=1");
   const add = page.getByRole("dialog", { name: "새로 추가" });
-  await add.getByRole("button", { name: /카드 문자 붙여넣기/ }).click();
+  await add.getByRole("button", { name: /결제문자 붙여넣기/ }).click();
   const box = add.getByLabel("결제 문자");
   await add.getByRole("button", { name: "읽기" }).click();
   await expect(add.getByRole("alert")).toHaveText("결제 문자를 붙여 넣어 주세요.");
@@ -126,17 +126,17 @@ test("클립보드를 못 읽으면 길게 눌러 붙여 넣으라고 안내한�
   });
   await page.goto("/?add=1");
   const add = page.getByRole("dialog", { name: "새로 추가" });
-  await add.getByRole("button", { name: /카드 문자 붙여넣기/ }).click();
+  await add.getByRole("button", { name: /결제문자 붙여넣기/ }).click();
   await add.getByRole("button", { name: "붙여넣기" }).click();
   await expect(add.getByRole("alert")).toHaveText("입력칸을 길게 눌러 붙여 넣어 주세요.");
 });
 
-test("분기에서 직접 적기는 지금 흐름으로 간다", async ({ page, context }) => {
+test("분기에서 직접 입력는 지금 흐름으로 간다", async ({ page, context }) => {
   const g = await readyGroupFixture("e2e-paste-direct");
   await signIn(context, g.owner.email);
   await page.goto("/?add=1");
   const add = page.getByRole("dialog", { name: "새로 추가" });
-  await add.getByRole("button", { name: /직접 적기/ }).click();
+  await add.getByRole("button", { name: /직접 입력/ }).click();
   await expect(add.getByLabel("금액")).toBeVisible();
 });
 
@@ -149,7 +149,7 @@ test("검토 반영: [그래도 저장]을 저장 직후 한 번 더 눌러도 �
   await signIn(context, g.owner.email);
   await page.goto("/?add=1");
   const add = page.getByRole("dialog", { name: "새로 추가" });
-  await add.getByRole("button", { name: /카드 문자 붙여넣기/ }).click();
+  await add.getByRole("button", { name: /결제문자 붙여넣기/ }).click();
   await add.getByLabel("결제 문자").fill(kbAt(3));
   await add.getByRole("button", { name: "읽기" }).click();
   await add.getByRole("button", { name: "식비", exact: true }).click();
@@ -190,11 +190,19 @@ test("움직임 다듬기: 펼친 버튼 아래 3초 줄, 누르면 ✓ 체크 �
   await open.click();
   await expect(page.locator("[data-add-button]")).toHaveAttribute("aria-busy", "true");
   const add = page.getByRole("dialog", { name: "새로 추가" });
-  const paste = add.getByRole("button", { name: /카드 문자 붙여넣기/ });
-  const direct = add.getByRole("button", { name: /직접 적기/ });
+  const paste = add.getByRole("button", { name: /결제문자 붙여넣기/ });
+  const direct = add.getByRole("button", { name: /직접 입력/ });
   const [a, b] = [(await paste.boundingBox())!, (await direct.boundingBox())!];
   expect(Math.abs(a.y - b.y)).toBeLessThan(2); // 같은 줄
   expect(b.x).toBeGreaterThan(a.x + a.width - 1); // 오른쪽
+  // 질문은 화면 가운데, 카드 이름은 '결제문자 붙여넣기 / 직접 입력'
+  const q = add.getByRole("heading", { name: "어떻게 적을까요?" });
+  expect(await q.evaluate((el) => getComputedStyle(el).textAlign)).toBe("center");
+  const qb = (await q.boundingBox())!;
+  const vw = page.viewportSize()!.width;
+  expect(Math.abs(qb.x + qb.width / 2 - vw / 2)).toBeLessThan(4);
+  await expect(paste).toContainText("결제문자 붙여넣기");
+  await expect(direct).toContainText("직접 입력");
   await paste.click();
   await expect(paste).toHaveAttribute("aria-busy", "true");
   await expect(add.getByLabel("결제 문자")).toBeVisible();
