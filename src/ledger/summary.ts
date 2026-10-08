@@ -18,6 +18,8 @@ export type LedgerTx = {
   rawMessageId: string | null;
   /** 카드사(kb·hyundai). 직접 입력은 null */
   issuer?: string | null;
+  /** "onnuri"면 온누리상품권으로 낸 결제(카드 대금 미청구). 쓴 돈에는 그대로 넣는다 */
+  paidWith?: string | null;
 };
 
 export type Member = { userId: string; name: string };

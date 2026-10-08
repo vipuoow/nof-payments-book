@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { issuerLabel } from "@/ledger/issuer";
+import { issuerLabel, paidWithOf } from "@/ledger/issuer";
 import { kstTime } from "@/ledger/month";
 import { formatWon, type DayGroup } from "@/ledger/summary";
 
@@ -16,6 +16,7 @@ export function DayList({
   if (groups.length === 0) {
     return <p className="py-12 text-center text-muted">이 달에는 거래가 없어요</p>;
   }
+  const byId = new Map(groups.flatMap((g) => g.items).map((t) => [t.id, t]));
   return (
     <div className="mt-2">
       {groups.map((g) => (
@@ -44,7 +45,7 @@ export function DayList({
                     </span>
                     <span className="flex shrink-0 flex-col items-end">
                       <span className={`tabular font-semibold ${cancelled ? "text-muted line-through" : ""}`}>{formatWon(t.amount)}원</span>
-                      <span data-testid="tx-card" className="text-xs text-muted">{issuerLabel(t.issuer ?? null, t.kind)}</span>
+                      <span data-testid="tx-card" className="text-xs text-muted">{issuerLabel(t.issuer ?? null, t.kind, paidWithOf(t, byId))}</span>
                     </span>
                   </Link>
                 </li>

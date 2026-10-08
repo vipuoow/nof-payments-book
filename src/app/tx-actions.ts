@@ -31,6 +31,19 @@ export async function setCategoryAction(_prev: ActionState, formData: FormData):
   redirect(safeNextPath(text(formData, "returnTo")), RedirectType.replace);
 }
 
+/** 온누리상품권 결제 표시를 켜고 끈다(카드 대금 미청구, 쓴 돈에는 그대로) */
+export async function setOnnuriAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.from("transactions")
+    .update({ paid_with: formData.get("onnuri") === "on" ? "onnuri" : null })
+    .eq("id", text(formData, "txId"))
+    .select("id");
+  // 없는 거래나 다른 그룹 거래는 바뀐 행이 0개다
+  if (error || !data?.length) return { error: FAIL };
+  revalidatePath("/");
+  redirect(safeNextPath(text(formData, "returnTo")), RedirectType.replace);
+}
+
 /** 더 보기: 금액·가맹점·일시·사람·메모. 취소 거래는 음수를 유지한다. */
 export async function updateTxAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = parseTxForm((name) => text(formData, name));

@@ -3,6 +3,7 @@ import { ActionButton } from "@/components/action-button";
 import { kstLocalValue } from "@/ledger/month";
 import { formatWon, type LedgerTx, type Member } from "@/ledger/summary";
 import { CategoryPicker } from "./category-picker";
+import { OnnuriToggle } from "./onnuri-toggle";
 import { ModalSheet } from "./modal-sheet";
 import { TxEditForm } from "./tx-edit-form";
 
@@ -16,6 +17,7 @@ export function TxSheet({
           <span className="tabular shrink-0">{formatWon(tx.amount)}원</span>
         </div>
         <CategoryPicker txId={tx.id} current={tx.categoryId} choices={choices} returnTo={closeHref} />
+        {tx.kind !== "cancel" && <OnnuriToggle txId={tx.id} on={tx.paidWith === "onnuri"} returnTo={closeHref} />}
         <details className="mt-5">
           <summary className="cursor-pointer text-sm text-accent">더 보기</summary>
           <TxEditForm
