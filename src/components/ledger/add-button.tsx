@@ -16,6 +16,7 @@ export function AddButton({ month }: { month: string }) {
   const [closing, setClosing] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const closer = useRef<number | undefined>(undefined);
+  const pill = useRef<HTMLAnchorElement>(null);
 
   function close() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return setOpen(false);
@@ -27,7 +28,8 @@ export function AddButton({ month }: { month: string }) {
   // 열려 있는 동안만: 3초 타이머와 바깥 누르기
   useEffect(() => {
     if (!open || closing) return;
-    const timer = window.setTimeout(close, OPEN_MS);
+    // 키보드·화면 읽기로 알약에 머무는 동안은 접지 않는다(벗어나면 접힌다)
+    const timer = window.setTimeout(() => { if (document.activeElement !== pill.current) close(); }, OPEN_MS);
     const outside = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node)) close(); };
     document.addEventListener("pointerdown", outside);
     return () => { window.clearTimeout(timer); document.removeEventListener("pointerdown", outside); };
@@ -38,7 +40,8 @@ export function AddButton({ month }: { month: string }) {
     <div ref={box} className={`add-menu ${open && !closing ? "is-open" : ""}`}>
       {open && (
         <a
-          href={href} className={`add-pill ${closing ? "is-closing" : ""}`}
+          ref={pill} href={href} className={`add-pill ${closing ? "is-closing" : ""}`}
+          onBlur={(e) => { if (!box.current?.contains(e.relatedTarget as Node)) close(); }}
           onClick={(e) => { e.preventDefault(); setOpen(false); setClosing(false); pushOverlay(href); }}
         >
           결제 직접 입력

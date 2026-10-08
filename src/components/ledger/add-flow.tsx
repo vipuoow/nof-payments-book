@@ -124,6 +124,8 @@ export function AddFlow({
   }
   /** force: 겹침 경고 뒤 [그래도 저장] */
   async function save(force = false) {
+    // 저장한 뒤 그 달로 옮겨 가는 동안 다시 눌러도 또 저장하지 않는다(그래도 저장 버튼 포함)
+    if (saved) return false;
     const r = await createTx({
       amount: draft.amount, merchant: draft.merchant.trim(), occurredAt: `${draft.date}T${draft.time}`,
       userId: draft.userId, categoryId: draft.categoryId ?? null, rawId, checkOverlap: pasted && !force,

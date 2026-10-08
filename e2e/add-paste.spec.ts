@@ -136,3 +136,42 @@ test("분기에서 직접 적기는 지금 흐름으로 간다", async ({ page, 
   await add.getByRole("button", { name: /직접 적기/ }).click();
   await expect(add.getByLabel("금액")).toBeVisible();
 });
+
+test("검토 반영: [그래도 저장]을 저장 직후 한 번 더 눌러도 한 번만 저장된다", async ({ page, context }) => {
+  const g = await readyGroupFixture("e2e-paste-force-twice");
+  await db.from("transactions").insert({
+    group_id: g.groupId, user_id: g.owner.userId, kind: "manual", amount: 12300, merchant: "먼저 적은 커피",
+    occurred_at: new Date(Date.now() - 4 * 60_000).toISOString(),
+  });
+  await signIn(context, g.owner.email);
+  await page.goto("/?add=1");
+  const add = page.getByRole("dialog", { name: "새로 추가" });
+  await add.getByRole("button", { name: /카드 문자 붙여넣기/ }).click();
+  await add.getByLabel("결제 문자").fill(kbAt(3));
+  await add.getByRole("button", { name: "읽기" }).click();
+  await add.getByRole("button", { name: "식비", exact: true }).click();
+  await add.getByRole("button", { name: "다 입력했어요" }).click();
+  await add.getByRole("button", { name: "저장하기" }).click();
+  await expect(add.getByRole("alert")).toContainText("이미 들어온 결제 같아요");
+  // 저장 뒤 그 달로 옮겨 가는 화면 전환을 늦춰, 체크 표시가 남은 버튼을 한 번 더 누른다
+  await page.route(/\/\?month=/, async (r) => { if (r.request().headers()["rsc"]) await new Promise((res) => setTimeout(res, 2500)); await r.continue(); });
+  const force = add.locator(".check-btn");
+  await force.click();
+  await expect.poll(async () => (await db.from("transactions").select("id").eq("group_id", g.groupId).eq("merchant", "테스트커피 강남역점(메가")).data?.length).toBe(1);
+  await force.click({ force: true });
+  await page.waitForTimeout(1500);
+  expect((await db.from("transactions").select("id").eq("group_id", g.groupId).eq("merchant", "테스트커피 강남역점(메가")).data).toHaveLength(1);
+});
+
+test("검토 반영: 키보드로 알약에 머물러 있으면 3초가 지나도 접히지 않고, 벗어나면 접힌다", async ({ page, context }) => {
+  const g = await readyGroupFixture("e2e-add-menu-focus");
+  await signIn(context, g.owner.email);
+  await page.goto("/");
+  await page.getByRole("button", { name: "결제 입력 메뉴" }).click();
+  const pill = page.getByRole("link", { name: "결제 직접 입력" });
+  await pill.focus();
+  await page.waitForTimeout(3300);
+  await expect(pill).toBeVisible();
+  await page.getByLabel("메뉴", { exact: true }).focus();
+  await expect(pill).toHaveCount(0);
+});
