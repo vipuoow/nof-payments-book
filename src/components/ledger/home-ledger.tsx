@@ -8,6 +8,7 @@ import { AddFlow } from "./add-flow";
 import type { DayView, LedgerChoices, RawView } from "./home-types";
 import { Inbox } from "./inbox";
 import { collapse, drainInto, expandFrom, zoomHome } from "./motion";
+import { forgetOverlay, onPopState, popOverlay, pushOverlay } from "./overlay-history";
 import { TxDetail } from "./tx-detail";
 import { TxRows } from "./tx-rows";
 
@@ -26,8 +27,6 @@ const LABELS = { tx: "거래 상세", add: "새로 추가", inbox: "확인할 �
 
 const noop = () => () => {};
 
-/** 우리가 연 화면 표시(뒤로 가기로 닫을 수 있는지). Next가 이 객체에 내부 값을 덧붙이므로 매번 새로 만든다 */
-const pushed = () => ({ lx: true });
 
 /**
  * 홈 목록과 그 위에 겹쳐 뜨는 화면(거래 상세·새로 추가·확인할 문자), 지울지 묻는 창, 짧은 알림.
@@ -68,20 +67,30 @@ export function HomeLedger({
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deletePending, startDelete] = useTransition();
 
-  const go = useCallback((params: string) => {
-    window.history.pushState(pushed(), "", `${base}&${params}`);
-  }, [base]);
+  const go = useCallback((params: string) => pushOverlay(`${base}&${params}`), [base]);
   const close = useCallback(() => {
     if (closing.current) return;
-    if (window.history.state?.lx) window.history.back();
-    else window.history.replaceState(null, "", base);
+    popOverlay(base);
   }, [base]);
+  useEffect(() => {
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   // 주소가 바뀌면 화면을 열고·바꾸고·닫는다. 닫을 때는 움직임이 끝난 뒤에 지워야 해서
   // 주소에서 바로 계산하지 않고 지금 띄운 화면(shown)을 따로 둔다.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (keyOf(target) === keyOf(shown) || closing.current) return;
+    if (closing.current) return;
+    if (shown?.kind === "tx" && !rows.has(shown.id)) {
+      // 열린 거래가 목록에서 빠졌다(다른 달로 옮김·지움): 들어갈 줄이 없으니 바로 닫는다
+      if (keyOf(target) === keyOf(shown)) popOverlay(base);
+      zoomHome(false);
+      setShown(null);
+      setIn(false);
+      return;
+    }
+    if (keyOf(target) === keyOf(shown)) return;
     if (target && !shown) {
       if (target.kind === "tx" && !rows.has(target.id)) {
         // 다른 달·다른 그룹 거래는 열지 않는다
@@ -109,6 +118,7 @@ export function HomeLedger({
       closing.current = true;
       drainInto(layer.current, to, () => {
         closing.current = false;
+        drainTo.current = null;
         setShown(null);
         setIn(false);
       });
@@ -124,19 +134,25 @@ export function HomeLedger({
       ? document.querySelector(`[data-row-id="${shown.id}"]`)
       : document.querySelector(shown.kind === "inbox" ? "[data-inbox-button]" : "[data-add-button]");
     expandFrom(layer.current, from, shown.kind === "tx" ? 0 : shown.kind === "inbox" ? 16 : 99, () => setIn(true));
-    layer.current.focus();
+    // 입력칸이 스스로 포커스를 받았으면(금액 등) 빼앗지 않는다
+    if (!layer.current.contains(document.activeElement)) layer.current.focus();
   }, [shown]);
 
   useEffect(() => () => zoomHome(false), []);
   useEffect(() => {
     if (!shown) return;
-    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !e.isComposing && !deleting) close();
+    };
     window.addEventListener("keydown", esc);
     return () => window.removeEventListener("keydown", esc);
-  }, [shown, close]);
+  }, [shown, close, deleting]);
 
   function saved(id: string, savedMonth: string) {
+    // 저장 중에 닫았으면 들어갈 화면이 없다
+    if (!shown || closing.current) return void router.refresh();
     drainTo.current = id;
+    forgetOverlay();
     // 저장한 달로 옮겨 간다(같은 달이어도 새 목록을 받는다). 그 사이 주소에서 새로 추가가 빠지며 닫힌다
     startNav(() => router.replace(`/?month=${savedMonth}`, { scroll: false }));
   }
@@ -187,11 +203,11 @@ export function HomeLedger({
         >
           <div className="lx-inner">
             {shown.kind === "tx" && tx && (
-              <TxDetail key={tx.id} tx={tx} choices={choices} now={now} onClose={close} onToast={showToast} />
+              <TxDetail key={tx.id} tx={tx} choices={choices} now={now} onClose={close} onToast={showToast} onAskDelete={() => setDeleting(tx.id)} />
             )}
             {shown.kind === "add" && (
               <AddFlow
-                key={shown.rawId ?? "new"} meId={meId} now={now} choices={choices} raw={raw}
+                key={shown.rawId ?? "new"} meId={meId} now={now} choices={choices} raw={raw} rawId={shown.rawId}
                 onClose={close} onSaved={saved}
               />
             )}

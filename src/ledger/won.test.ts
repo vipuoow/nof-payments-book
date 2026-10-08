@@ -38,3 +38,15 @@ describe("nextRawAmount", () => {
     expect(nextRawAmount("12", "historyUndo", null)).toBeNull();
   });
 });
+
+describe("rawFromEdit (beforeinput을 막을 수 없는 안드로이드 키보드)", () => {
+  it("화면 글자가 바뀐 만큼만 실제 숫자에 반영한다", async () => {
+    const { rawFromEdit } = await import("./won");
+    expect(rawFromEdit("100000", "10만5")).toBe("1000005"); // 숫자 하나 붙임
+    expect(rawFromEdit("100000", "10")).toBe("10000"); // "만"을 지움 → 숫자 하나 지움
+    expect(rawFromEdit("13325", "1만 332")).toBe("1332");
+    expect(rawFromEdit("", "12,300")).toBe("12300");
+    expect(rawFromEdit("5", "")).toBe("");
+    expect(rawFromEdit("100000", "0")).toBe(""); // 앞의 0은 없앤다
+  });
+});

@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { APPROVAL, UNKNOWN_KB } from "@/parsers/__fixtures__/kb-card";
 import { ingestMessage } from "@/ingest/service";
 import { adminClient, type GroupFixture } from "../tests/helpers/db";
-import { at, kstStamp, readyGroupFixture, signIn } from "./support";
+import { at, kstStamp, pickCategory, readyGroupFixture, signIn } from "./support";
 
 const db = adminClient();
 const send = (g: GroupFixture, body: string, who: "owner" | "member" = "owner") =>
@@ -206,4 +206,41 @@ test("예전 주소(/new, /unparsed)는 새 화면으로 연다", async ({ page,
   await expect(page.getByRole("dialog", { name: "새로 추가" })).toBeVisible();
   await page.goto("/unparsed");
   await expect(page.getByRole("dialog", { name: "확인할 문자" })).toBeVisible();
+});
+
+test("검토 반영: 다른 달로 옮기면 상세가 닫히고, 상세에서도 지울 수 있고, 고친 뒤 닫아도 '뒤로'가 한 번에 이전 화면으로 간다", async ({ page, context }) => {
+  const g = await readyGroupFixture("e2e-review");
+  const moving = await manual(g, "옮길 가게");
+  await manual(g, "지울 가게2");
+  await send(g, at(APPROVAL, kstStamp(3)));
+  await signIn(context, g.owner.email);
+
+  // 언제를 지난달로 바꾸면 이 달 목록에서 빠지며 상세가 닫힌다(빈 화면에 갇히지 않는다)
+  await page.goto(`/?tx=${moving}`);
+  await field(page.getByRole("dialog", { name: "거래 상세" }), "언제").click();
+  const step = page.getByRole("region", { name: "언제 고치기" });
+  const k = new Date(Date.now() + 9 * 3600_000);
+  const lastMonth = new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth() - 1, 15)).toISOString().slice(0, 10);
+  await step.getByLabel("날짜").fill(lastMonth);
+  await step.getByRole("button", { name: "확인" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("tx-row").filter({ hasText: "옮길 가게" })).toHaveCount(0);
+
+  // 상세의 "이 거래 지우기"(밀기를 못 쓰는 경우)
+  await page.getByTestId("tx-row").filter({ hasText: "지울 가게2" }).click();
+  await page.getByRole("dialog", { name: "거래 상세" }).getByRole("button", { name: "이 거래 지우기" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "지우기" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("tx-row").filter({ hasText: "지울 가게2" })).toHaveCount(0);
+
+  // 고친 뒤(새로고침이 history 값을 바꿔도) 닫으면 뒤로 간 것이라, 다음 '뒤로'는 이전 화면으로 간다
+  const p2 = await context.newPage();
+  await p2.goto("/categories");
+  await p2.goto("/");
+  await p2.getByTestId("tx-row").filter({ hasText: "테스트커피" }).click();
+  await pickCategory(p2, "카페");
+  await p2.getByRole("dialog", { name: "거래 상세" }).getByRole("button", { name: "✕ 닫기" }).click();
+  await expect(p2.getByRole("dialog")).toHaveCount(0);
+  await p2.goBack();
+  await expect(p2).toHaveURL(/\/categories$/);
 });

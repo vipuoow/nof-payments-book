@@ -27,8 +27,8 @@ const patchOf = (k: FieldKey, d: Draft): TxPatch =>
  * 항목을 누르면 그 항목 한 화면이 오른쪽에서 밀려 들어오고, 확인하면 돌아와 바뀐 값이 반짝인다.
  */
 export function TxDetail({
-  tx, choices, now, onClose, onToast,
-}: { tx: RowTx; choices: LedgerChoices; now: Date; onClose: () => void; onToast: (t: string) => void }) {
+  tx, choices, now, onClose, onToast, onAskDelete,
+}: { tx: RowTx; choices: LedgerChoices; now: Date; onClose: () => void; onToast: (t: string) => void; onAskDelete: () => void }) {
   const router = useRouter();
   const [step, setStep] = useState<FieldKey | null>(null);
   const [stepIn, setStepIn] = useState(false);
@@ -138,8 +138,11 @@ export function TxDetail({
           />
         </label>
       )}
-      {tx.kind !== "manual" && (
+      {tx.kind !== "manual" ? (
         <p className="lx-fade mt-3 px-5 text-center text-xs text-muted">카드 문자로 들어온 거래는 분류만 고칠 수 있어요.</p>
+      ) : (
+        // 밀어서 지우기를 못 쓰는 경우(키보드·화면 읽기)에도 지울 수 있게
+        <button type="button" onClick={onAskDelete} className="lx-fade mx-auto mt-4 block px-4 py-2 text-sm text-danger">이 거래 지우기</button>
       )}
       </div>
 

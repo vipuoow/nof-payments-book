@@ -32,3 +32,22 @@ export function nextRawAmount(raw: string, inputType: string, data: string | nul
   }
   return next.replace(/^0+/, "").slice(0, MAX_AMOUNT_DIGITS);
 }
+
+/**
+ * beforeinput을 막을 수 없는 키보드(일부 안드로이드)용: 바뀐 화면 글자를 이전 화면 글자(koWon(raw))와 비교해
+ * 붙인 숫자는 실제 숫자 뒤에 붙이고, 지운 만큼(단위 글자 하나도 숫자 하나로 본다) 뒤에서 지운다.
+ */
+export function rawFromEdit(raw: string, text: string): string {
+  const before = koWon(raw);
+  const oldDigits = before.replace(/[^0-9]/g, "");
+  const newDigits = text.replace(/[^0-9]/g, "");
+  let next: string;
+  if (newDigits.length > oldDigits.length && newDigits.startsWith(oldDigits)) {
+    next = raw + newDigits.slice(oldDigits.length);
+  } else if (text.length < before.length && oldDigits.startsWith(newDigits)) {
+    next = raw.slice(0, Math.max(0, raw.length - Math.max(1, oldDigits.length - newDigits.length)));
+  } else {
+    next = newDigits;
+  }
+  return next.replace(/^0+/, "").slice(0, MAX_AMOUNT_DIGITS);
+}

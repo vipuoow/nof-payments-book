@@ -25,9 +25,11 @@ function initial(meId: string, now: Date, raw: RawView | null): { draft: Draft; 
  * 답하면 그 값이 위로 올라가 쌓이고, 쌓인 값을 누르면 다시 고친다. 다 쌓이면 [저장하기].
  */
 export function AddFlow({
-  meId, now, choices, raw, onClose, onSaved,
+  meId, now, choices, raw, rawId, onClose, onSaved,
 }: {
   meId: string; now: Date; choices: LedgerChoices; raw: RawView | null;
+  /** 문자에서 왔으면 그 문자 id(목록이 새로 고쳐져 raw가 사라져도 서버가 처리 여부를 확인하도록 그대로 보낸다) */
+  rawId: string | null;
   onClose: () => void; onSaved: (id: string, month: string) => void;
 }) {
   const [start] = useState(() => initial(meId, now, raw));
@@ -87,7 +89,7 @@ export function AddFlow({
     startTransition(async () => {
       const r = await createTx({
         amount: draft.amount, merchant: draft.merchant.trim(), occurredAt: `${draft.date}T${draft.time}`,
-        userId: draft.userId, categoryId: draft.categoryId ?? null, rawId: raw?.id ?? null,
+        userId: draft.userId, categoryId: draft.categoryId ?? null, rawId,
       });
       if (!r.ok) return setError(r.error);
       setSaved(true);

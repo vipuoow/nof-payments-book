@@ -11,6 +11,7 @@ test("입력칸은 16px 이상이라 아이폰이 확대하지 않는다", async
   const add = page.getByRole("dialog", { name: "새로 추가" });
   const sizes: number[] = [];
   const read = async () => sizes.push(...await add.locator("input").evaluateAll((els) => els.map((e) => parseFloat(getComputedStyle(e).fontSize))));
+  await expect(add.getByLabel("금액")).toBeVisible();
   await read(); // 금액
   await add.getByLabel("금액").pressSequentially("1000");
   await add.getByRole("button", { name: "다음" }).click();

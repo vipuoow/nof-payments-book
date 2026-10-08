@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import { dayLabel } from "@/ledger/month";
 import type { Member } from "@/ledger/summary";
 import { dayShortcuts } from "@/ledger/when";
-import { koWon, nextRawAmount } from "@/ledger/won";
+import { koWon, nextRawAmount, rawFromEdit } from "@/ledger/won";
 
 /** 한 화면에 하나씩 묻는 항목. 새로 추가는 이 순서로 묻는다 */
 export const STEPS = ["amount", "merchant", "category", "when", "who"] as const;
@@ -118,6 +118,8 @@ function AmountInput({ raw, onRaw, onKeyDown }: { raw: string; onRaw: (raw: stri
     const el = ref.current;
     if (!el) return;
     const before = (e: InputEvent) => {
+      // 막을 수 없는 입력(일부 안드로이드 키보드·조합 중 글자)은 onChange에서 바뀐 만큼 반영한다
+      if (!e.cancelable || e.isComposing || e.inputType.includes("Composition")) return;
       // 글자를 골라 둔 채 누르면(전체 선택 후 입력 등) 처음부터 다시
       const selected = el.selectionStart !== el.selectionEnd;
       const next = nextRawAmount(selected ? "" : rawRef.current, e.inputType, e.data ?? e.dataTransfer?.getData("text") ?? null);
@@ -136,8 +138,8 @@ function AmountInput({ raw, onRaw, onKeyDown }: { raw: string; onRaw: (raw: stri
     <input
       ref={ref} aria-label="금액" autoFocus inputMode="numeric" enterKeyHint="next" autoComplete="off"
       value={koWon(raw)} placeholder="0" onKeyDown={onKeyDown}
-      // beforeinput이 없는 브라우저: 바뀐 글자에서 숫자만 다시 읽는다
-      onChange={(e) => onRaw(e.target.value.replace(/[^0-9]/g, "").replace(/^0+/, "").slice(0, 11))}
+      // beforeinput을 막지 못한 경우: 이전 화면 글자와 비교해 바뀐 만큼만 반영한다
+      onChange={(e) => onRaw(rawFromEdit(rawRef.current, e.target.value))}
     />
   );
 }

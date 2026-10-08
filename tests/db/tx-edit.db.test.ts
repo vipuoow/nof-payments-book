@@ -110,3 +110,44 @@ describe("새로 추가와 확인할 문자", () => {
     }, now)).toEqual({ ok: false, error: "금액은 1원 이상 숫자로 입력해 주세요." });
   });
 });
+
+describe("검토 반영", () => {
+  it("카드 문자 거래는 DB에서도 금액·가게·언제·누가를 바꾸거나 지울 수 없다(분류·온누리는 된다)", async () => {
+    const g = await createGroupFixture("txe-db");
+    const id = await cardTx(g);
+    for (const patch of [{ amount: 1 }, { merchant: "x" }, { occurred_at: new Date().toISOString() }, { user_id: g.member.userId }]) {
+      const r = await g.member.client.from("transactions").update(patch).eq("id", id);
+      expect(r.error).not.toBeNull();
+    }
+    const del = await g.member.client.from("transactions").delete().eq("id", id).select("id");
+    expect(del.data ?? []).toEqual([]);
+    expect(await row(id)).toMatchObject({ amount: 12300, merchant: "테스트커피 강남역점(메가" });
+    expect((await g.member.client.from("transactions").update({ paid_with: "onnuri" }).eq("id", id)).error).toBeNull();
+    // 직접 추가한 거래는 그대로 고칠 수 있다
+    const manual = await manualTx(g);
+    expect((await g.member.client.from("transactions").update({ amount: 9 }).eq("id", manual)).error).toBeNull();
+  });
+
+  it("같은 문자를 둘이 동시에 등록해도 거래는 하나만 생긴다", async () => {
+    const g = await createGroupFixture("txe-race");
+    await ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId }, { body: UNKNOWN_KB, receivedAt: now, source: "manual_test" });
+    const rawId = await unparsedOf(g.owner.userId);
+    const input = { amount: "1000", merchant: "결제", occurredAt: kstLocal(now), userId: g.owner.userId, categoryId: null, rawId };
+    const results = await Promise.all([
+      createManualTx(g.owner.client, g.groupId, input, now), createManualTx(g.member.client, g.groupId, input, now),
+    ]);
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect((await db.from("transactions").select("id").eq("group_id", g.groupId)).data).toHaveLength(1);
+  });
+
+  it("이상한 입력은 오류로 끝나지 않고 거절한다", async () => {
+    const g = await createGroupFixture("txe-junk");
+    const card = await cardTx(g);
+    const bad = { ok: false, error: "저장하지 못했습니다. 다시 시도해 주세요." };
+    expect(await editTx(g.owner.client, card, null as never, now)).toEqual(bad);
+    expect(await editTx(g.owner.client, card, { amount: 5 as never }, now)).toEqual(bad);
+    expect(await editTx(g.owner.client, card, { categoryId: null, amount: "1" }, now)).toEqual(bad); // 한 번에 한 항목
+    expect(await setOnnuri(g.owner.client, card, "false" as never)).toEqual(bad);
+    expect(await createManualTx(g.owner.client, g.groupId, null as never, now)).toEqual(bad);
+  });
+});

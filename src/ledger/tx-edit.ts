@@ -15,13 +15,26 @@ export const RAW_DONE = "이미 처리된 문자입니다.";
 /** 한 번에 한 항목. 값은 화면 입력 그대로(금액 "13,325", 언제 "YYYY-MM-DDTHH:mm") */
 export type TxPatch = { amount?: string; merchant?: string; occurredAt?: string; userId?: string; categoryId?: string | null };
 
+const PATCH_KEYS = ["amount", "merchant", "occurredAt", "userId", "categoryId"];
+
+/** 서버 함수는 아무 값으로나 불릴 수 있다: 항목 하나, 정해진 이름, 글자 값(분류는 null 허용)만 받는다 */
+function validPatch(patch: unknown): patch is TxPatch {
+  if (typeof patch !== "object" || patch === null) return false;
+  const entries = Object.entries(patch);
+  if (entries.length !== 1) return false;
+  const [key, value] = entries[0];
+  if (!PATCH_KEYS.includes(key)) return false;
+  return typeof value === "string" || (key === "categoryId" && value === null);
+}
+
 export async function editTx(db: SupabaseClient, txId: string, patch: TxPatch, now: Date = new Date()): Promise<EditResult> {
-  if (!isUuid(txId)) return { ok: false, error: FAIL };
+  if (!isUuid(txId) || !validPatch(patch)) return { ok: false, error: FAIL };
   if ("categoryId" in patch) {
+    if (patch.categoryId && !isUuid(patch.categoryId)) return { ok: false, error: FAIL };
     // 가게 규칙 학습·같은 달 같은 가게 일괄 적용은 DB 함수가 한다
     const { error } = await db.rpc("set_transaction_category", { p_transaction: txId, p_category: patch.categoryId || null });
     if (error) return { ok: false, error: FAIL };
-    if (Object.keys(patch).length === 1) return { ok: true };
+    return { ok: true };
   }
   const update: Record<string, unknown> = {};
   if (patch.amount !== undefined) {
@@ -55,7 +68,7 @@ export async function editTx(db: SupabaseClient, txId: string, patch: TxPatch, n
 
 /** 온누리상품권 결제 표시(카드 대금 미청구, 쓴 돈에는 그대로) */
 export async function setOnnuri(db: SupabaseClient, txId: string, on: boolean): Promise<EditResult> {
-  if (!isUuid(txId)) return { ok: false, error: FAIL };
+  if (!isUuid(txId) || typeof on !== "boolean") return { ok: false, error: FAIL };
   const { data, error } = await db.from("transactions").update({ paid_with: on ? "onnuri" : null }).eq("id", txId).select("id");
   // 없는 거래나 다른 그룹 거래는 바뀐 행이 0개다
   if (error || !data?.length) return { ok: false, error: FAIL };
@@ -79,6 +92,7 @@ export type NewTx = { amount: string; merchant: string; occurredAt: string; user
 export async function createManualTx(
   db: SupabaseClient, groupId: string, input: NewTx, now: Date = new Date(),
 ): Promise<{ ok: true; id: string; occurredAt: Date } | { ok: false; error: string }> {
+  if (typeof input !== "object" || input === null) return { ok: false, error: FAIL };
   const parsed = parseTxForm((name) => {
     const v = (input as Record<string, unknown>)[name];
     return typeof v === "string" ? v : "";
@@ -87,19 +101,23 @@ export async function createManualTx(
   const v = parsed.value;
   if (v.categoryId !== null && !isUuid(v.categoryId)) return { ok: false, error: FAIL };
   const rawId = isUuid(input.rawId) ? input.rawId : null;
+  // 문자를 먼저 차지한다(둘이 동시에 등록해도 한 사람만 성공). 거래 저장에 실패하면 되돌린다
   if (rawId) {
-    const { data: raw } = await db.from("raw_messages").select("id").eq("id", rawId).eq("status", "unparsed").maybeSingle();
-    if (!raw) return { ok: false, error: RAW_DONE };
+    const { data: claimed, error } = await db.from("raw_messages").update({ status: "parsed" })
+      .eq("id", rawId).eq("status", "unparsed").select("id");
+    if (error) return { ok: false, error: FAIL };
+    if (!claimed.length) return { ok: false, error: RAW_DONE };
   }
   const { data, error } = await db.from("transactions").insert({
     group_id: groupId, user_id: v.userId, kind: "manual", amount: v.amount, merchant: v.merchant,
     occurred_at: v.occurredAt.toISOString(), category_id: v.categoryId, memo: "",
   }).select("id").single();
-  if (error || !data) return { ok: false, error: FAIL };
-  if (rawId) {
-    // 실패해도 거래는 이미 저장됐다. 문자가 목록에 남으면 사용자가 무시할 수 있다.
-    const { error: rawError } = await db.from("raw_messages").update({ status: "parsed" }).eq("id", rawId).eq("status", "unparsed");
-    if (rawError) console.warn(`[unparsed] 문자 ${rawId} 상태 변경 실패: ${rawError.message}`);
+  if (error || !data) {
+    if (rawId) {
+      const { error: undo } = await db.from("raw_messages").update({ status: "unparsed" }).eq("id", rawId).eq("status", "parsed");
+      if (undo) console.warn(`[unparsed] 문자 ${rawId} 되돌리기 실패: ${undo.message}`);
+    }
+    return { ok: false, error: FAIL };
   }
   return { ok: true, id: data.id, occurredAt: v.occurredAt };
 }
