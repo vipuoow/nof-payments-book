@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckButton, OFFLINE, type CheckButtonHandle } from "./check-button";
-import { CloseX } from "@/components/icons";
+import { ChevronLeft, CloseX } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { setOnnuriPaid, updateTxField } from "@/app/tx-actions";
@@ -161,7 +161,7 @@ export function TxDetail({
         <section className={`lx-step flex flex-col ${stepIn ? "lx-step-in" : ""}`} aria-label={`${LABEL[step]} 고치기`}>
           <div className="lx-inner">
             <div className="lx-bar">
-              <button type="button" aria-label="뒤로" className="!text-[22px]" onClick={() => closeStep()}>‹</button>
+              <button type="button" aria-label="뒤로" className="close-icon" onClick={() => closeStep()}><ChevronLeft /></button>
               <span>{LABEL[step]} 고치기</span>
               <span className="w-8" />
             </div>

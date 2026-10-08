@@ -31,7 +31,7 @@ export function AddButton({ month }: { month: string }) {
 
   // 펼친 폭: 글자 폭 + 좌우 여백(글꼴이 늦게 와도 맞도록 열 때마다 잰다)
   useLayoutEffect(() => {
-    if (state === "open" && measure.current) setWide(Math.ceil(measure.current.offsetWidth) + 36);
+    if (state === "open" && measure.current) setWide(Math.ceil(measure.current.offsetWidth) + 30);
   }, [state]);
 
   function bye() {

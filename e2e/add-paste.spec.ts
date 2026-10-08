@@ -118,17 +118,37 @@ test("금액 없는 글·취소 문자·빈 칸은 안내하고, 금액만 있�
   await expect(add.getByRole("textbox")).toBeVisible(); // 어디서
 });
 
-test("클립보드를 못 읽으면 길게 눌러 붙여 넣으라고 안내한다", async ({ page, context }) => {
-  const g = await readyGroupFixture("e2e-paste-clip");
+test("다듬기(10/09): 붙여넣기 화면엔 [붙여넣기] 버튼이 없고, 질문은 '썼나요?', 날짜는 YY/MM/DD, 뒤로 아이콘은 크게", async ({ page, context }) => {
+  const g = await readyGroupFixture("e2e-polish-1009");
   await signIn(context, g.owner.email);
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, "clipboard", { value: { readText: () => Promise.reject(new Error("denied")) } });
-  });
-  await page.goto("/?add=1");
+  await page.goto("/");
+  // 펼친 버튼은 조금 작게(높이 36px 이하)
+  await page.getByRole("button", { name: "결제 입력 메뉴" }).click();
+  const open = page.getByRole("button", { name: "결제 직접 입력" });
+  await expect(open).toBeVisible();
+  await page.waitForTimeout(600);
+  expect((await open.boundingBox())!.height).toBeLessThanOrEqual(36);
+  await open.click();
   const add = page.getByRole("dialog", { name: "새로 추가" });
   await add.getByRole("button", { name: /결제문자 붙여넣기/ }).click();
-  await add.getByRole("button", { name: "붙여넣기" }).click();
-  await expect(add.getByRole("alert")).toHaveText("입력칸을 길게 눌러 붙여 넣어 주세요.");
+  await expect(add.getByLabel("결제 문자")).toBeVisible();
+  await expect(add.getByRole("button", { name: "붙여넣기", exact: true })).toHaveCount(0);
+  const back = add.getByRole("button", { name: "뒤로" });
+  expect((await back.locator("svg").boundingBox())!.width).toBeGreaterThanOrEqual(24);
+  await back.click();
+  await add.getByRole("button", { name: /직접 입력/ }).click();
+  await expect(add.getByRole("heading", { name: "얼마 썼나요?" })).toBeVisible();
+  await add.getByLabel("금액").pressSequentially("5000");
+  await add.getByRole("button", { name: "다음" }).click();
+  await expect(add.getByRole("heading", { name: "어디서 썼나요?" })).toBeVisible();
+  await add.getByRole("textbox").fill("시장");
+  await add.getByRole("textbox").press("Enter");
+  await add.getByRole("button", { name: "식비", exact: true }).click();
+  await add.getByRole("button", { name: "다음" }).click();
+  await expect(add.getByRole("heading", { name: "언제 썼나요?" })).toBeVisible();
+  const k = new Date(Date.now() + 9 * 3600_000).toISOString();
+  const yymmdd = `${k.slice(2, 4)}/${k.slice(5, 7)}/${k.slice(8, 10)}`;
+  await expect(add.getByTestId("when-date")).toHaveText(yymmdd);
 });
 
 test("분기에서 직접 입력는 지금 흐름으로 간다", async ({ page, context }) => {

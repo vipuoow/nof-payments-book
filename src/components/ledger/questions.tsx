@@ -11,7 +11,7 @@ export const STEPS = ["amount", "merchant", "category", "when", "who"] as const;
 export type FieldKey = (typeof STEPS)[number];
 export const LABEL: Record<FieldKey, string> = { amount: "금액", merchant: "어디서", category: "분류", when: "언제", who: "누가" };
 const TITLE: Record<FieldKey, string> = {
-  amount: "얼마 썼어요?", merchant: "어디서 썼어요?", category: "어떤 분류예요?", when: "언제 썼어요?", who: "누가 썼어요?",
+  amount: "얼마 썼나요?", merchant: "어디서 썼나요?", category: "어떤 분류예요?", when: "언제 썼나요?", who: "누가 썼나요?",
 };
 
 /** amount는 실제 숫자(쉼표 없음), categoryId는 undefined면 아직 안 고름(null은 미지정) */
@@ -89,6 +89,9 @@ export function Question({
   );
 }
 
+/** "2026-10-09" → "26/10/09" */
+const yymmdd = (date: string) => (/^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date.slice(2, 4)}/${date.slice(5, 7)}/${date.slice(8, 10)}` : "");
+
 function WhenInput({ draft, set, now }: { draft: Draft; set: (p: Partial<Draft>) => void; now: Date }) {
   const shortcuts = dayShortcuts(now);
   return (
@@ -99,7 +102,11 @@ function WhenInput({ draft, set, now }: { draft: Draft; set: (p: Partial<Draft>)
         ))}
       </div>
       <div className="flex gap-3">
-        <input aria-label="날짜" type="date" className="lx-small" value={draft.date} max={shortcuts[0].date} onChange={(e) => set({ date: e.target.value })} />
+        {/* 휴대폰 지역 설정과 관계없이 YY/MM/DD로 보인다. 누르면 휴대폰 날짜 고르기가 열린다 */}
+        <label className="lx-small lx-date">
+          <span data-testid="when-date" aria-hidden>{yymmdd(draft.date)}</span>
+          <input aria-label="날짜" type="date" value={draft.date} max={shortcuts[0].date} onChange={(e) => set({ date: e.target.value })} />
+        </label>
         <input aria-label="시각" type="time" className="lx-small" value={draft.time} onChange={(e) => set({ time: e.target.value })} />
       </div>
     </>

@@ -16,13 +16,13 @@ test("입력칸은 16px 이상이라 아이폰이 확대하지 않는다", async
   await read(); // 금액
   await add.getByLabel("금액").pressSequentially("1000");
   await add.getByRole("button", { name: "다음" }).click();
-  await expect(add.getByRole("heading", { name: "어디서 썼어요?" })).toBeVisible();
+  await expect(add.getByRole("heading", { name: "어디서 썼나요?" })).toBeVisible();
   await read(); // 가게
   await add.getByRole("textbox").fill("시장");
   await add.getByRole("button", { name: "다음" }).click();
   await add.getByRole("button", { name: "미지정", exact: true }).click();
   await add.getByRole("button", { name: "다음" }).click();
-  await expect(add.getByRole("heading", { name: "언제 썼어요?" })).toBeVisible();
+  await expect(add.getByRole("heading", { name: "언제 썼나요?" })).toBeVisible();
   await read(); // 날짜·시각
   expect(sizes.length).toBeGreaterThanOrEqual(4);
   for (const s of sizes) expect(s).toBeGreaterThanOrEqual(16);

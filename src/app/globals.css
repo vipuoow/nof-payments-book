@@ -247,26 +247,26 @@ main { transition: transform .45s cubic-bezier(.2,.8,.2,1), filter .45s; transfo
 @keyframes check-glow { 0% { transform: scale(.04); opacity: 0; } 18% { opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .check-btn.is-checking, .check-mark { animation: none; stroke-dashoffset: 0; } }
 /* 홈 + : 누르면 같은 버튼이 "쇽" 튕기듯 늘어나 [결제 직접 입력](아래 3초 줄), 시간이 다 되면 "bye bye~" 흔들고 +로 */
-.add-menu { position: relative; display: flex; justify-content: flex-end; }
+.add-menu { position: relative; display: flex; justify-content: flex-end; align-items: center; height: 40px; }
 .add-fab { position: relative; height: 40px; width: 40px; border-radius: 99px; overflow: hidden; color: var(--accent);
   background: color-mix(in srgb, var(--accent) 0%, transparent);
-  transition: width .5s cubic-bezier(.34,1.56,.64,1), background-color .3s ease, color .3s ease, box-shadow .45s ease; }
-.add-fab-plus { position: absolute; right: 0; top: 0; width: 40px; height: 40px; display: grid; place-items: center; font-size: 27px; line-height: 1;
+  transition: width .5s cubic-bezier(.34,1.56,.64,1), height .4s cubic-bezier(.34,1.56,.64,1), background-color .3s ease, color .3s ease, box-shadow .45s ease; }
+.add-fab-plus { position: absolute; right: 0; top: 50%; margin-top: -20px; width: 40px; height: 40px; display: grid; place-items: center; font-size: 27px; line-height: 1;
   transition: opacity .2s ease, transform .45s cubic-bezier(.34,1.56,.64,1); }
-.add-fab-label { position: absolute; right: 18px; top: 0; height: 40px; display: flex; align-items: center; white-space: nowrap;
-  font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; opacity: 0; transform: translateX(14px) scale(.92); transform-origin: right center;
+.add-fab-label { position: absolute; right: 15px; top: 0; bottom: 0; display: flex; align-items: center; white-space: nowrap;
+  font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; opacity: 0; transform: translateX(14px) scale(.92); transform-origin: right center;
   transition: opacity .18s ease, transform .5s cubic-bezier(.34,1.56,.64,1); }
 .add-fab-check { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transform: scale(.6); transition: opacity .2s ease, transform .35s cubic-bezier(.34,1.56,.64,1); }
-.add-fab-timer { position: absolute; left: 14px; right: 14px; bottom: 4px; height: 2.5px; border-radius: 99px; background: rgb(255 255 255 / .6);
+.add-fab-timer { position: absolute; left: 13px; right: 13px; bottom: 3px; height: 2.5px; border-radius: 99px; background: rgb(255 255 255 / .6);
   transform-origin: left center; animation: add-fab-timer 3s linear forwards; }
 .add-fab-timer.is-paused { animation-play-state: paused; }
 @keyframes add-fab-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 /* 펼침: 배경이 차오르고 +는 돌며 사라지고 글자가 살짝 늦게 튕겨 들어온다 */
-.add-menu:not(.is-closed) .add-fab { background: var(--accent); color: #fff; box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 30%, transparent); }
+.add-menu:not(.is-closed) .add-fab { height: 34px; background: var(--accent); color: #fff; box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 30%, transparent); }
 .add-menu:not(.is-closed) .add-fab-plus { opacity: 0; transform: rotate(90deg) scale(.5); }
 .add-menu.is-open .add-fab-label { opacity: 1; transform: none; transition: opacity .26s ease .1s, transform .5s cubic-bezier(.34,1.56,.64,1) .04s; }
 /* bye bye~: 글자가 손 흔들 듯 두 번 흔들린 뒤 작아지며 사라지고, 버튼은 +로 줄어든다 */
-.add-menu.is-bye .add-fab { width: 40px !important; background: color-mix(in srgb, var(--accent) 0%, transparent); color: var(--accent); box-shadow: none;
+.add-menu.is-bye .add-fab { width: 40px !important; height: 40px; background: color-mix(in srgb, var(--accent) 0%, transparent); color: var(--accent); box-shadow: none;
   transition: width .38s cubic-bezier(.5,0,.75,0) .22s, background-color .3s ease .26s, color .3s ease .26s, box-shadow .3s ease; }
 .add-menu.is-bye .add-fab-label { animation: add-fab-bye .52s ease-in forwards; }
 .add-menu.is-bye .add-fab-plus { opacity: 1; transform: none; transition: opacity .25s ease .3s, transform .4s cubic-bezier(.34,1.56,.64,1) .26s; }
@@ -278,6 +278,11 @@ main { transition: transform .45s cubic-bezier(.2,.8,.2,1), filter .45s; transfo
 .add-menu.is-checked .add-fab-check .check-mark { width: 22px; height: 22px; }
 .add-fab:active { transform: scale(.97); }
 .add-fab-measure { position: absolute; visibility: hidden; pointer-events: none; right: auto; }
+/* 언제: 날짜는 YY/MM/DD 글자로 보이고, 위에 겹친 투명한 날짜 칸을 누르면 휴대폰 날짜 고르기가 열린다 */
+.lx-date { position: relative; display: flex; align-items: center; width: 100%; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums;
+  border-bottom: 2px solid var(--accent); padding: 8px 0; }
+.lx-q .lx-date input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; font-size: 16px; border: 0; padding: 0; cursor: pointer; }
+.lx-date:focus-within { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 @media (prefers-reduced-motion: reduce) { .add-fab, .add-fab-plus, .add-fab-label, .add-fab-check { transition: none !important; animation: none !important; } .add-fab-timer { animation-duration: 3s; } }
 /* 새로 추가 분기: 질문은 가운데, 두 카드는 좌우로. 고르면 그 카드가 ✓로 바뀌며 빛이 퍼지고, 다른 카드는 옅어진다 */
 .add-choose { align-items: center; text-align: center; gap: 22px; }
