@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { kstMonthOf, monthParam } from "@/ledger/month";
 import {
-  createManualTx, deleteManualTx, editTx, FAIL, ignoreRaw, setOnnuri,
-  type EditResult, type NewTx, type TxPatch,
+  createManualTx, deleteManualTx, editTx, FAIL, ignoreRaw, ruleCategoryFor, setOnnuri,
+  type EditResult, type NewTx, type Overlap, type TxPatch,
 } from "@/ledger/tx-edit";
 import { loadMe } from "@/lib/session";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
@@ -36,13 +36,18 @@ export async function deleteTx(txId: string): Promise<EditResult> {
 }
 
 /** 저장한 거래의 id와 그 달(`YYYY-MM`). 화면은 그 달로 옮겨 가 새 줄로 빨려 들어간다. */
-export async function createTx(input: NewTx): Promise<{ ok: true; id: string; month: string } | { ok: false; error: string }> {
+export async function createTx(input: NewTx): Promise<{ ok: true; id: string; month: string } | { ok: false; error: string; overlap?: Overlap }> {
   const { supabase, me } = await loadMe();
   if (!me.groupId) return { ok: false, error: FAIL };
   const r = await createManualTx(supabase, me.groupId, input);
   if (!r.ok) return r;
   revalidatePath("/");
   return { ok: true, id: r.id, month: monthParam(kstMonthOf(r.occurredAt)) };
+}
+
+/** 붙여넣기: 가게 이름으로 우리 가계부의 가맹점 규칙 분류를 찾는다(없으면 null) */
+export async function findRuleCategory(merchant: string): Promise<string | null> {
+  return ruleCategoryFor(await createSupabaseServerClient(), merchant);
 }
 
 export async function ignoreRawMessage(rawId: string): Promise<EditResult> {

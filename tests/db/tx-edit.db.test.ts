@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { APPROVAL, UNKNOWN_KB } from "@/parsers/__fixtures__/kb-card";
 import { ingestMessage } from "@/ingest/service";
-import { createManualTx, deleteManualTx, editTx, ignoreRaw, setOnnuri } from "@/ledger/tx-edit";
+import { createManualTx, deleteManualTx, editTx, ignoreRaw, ruleCategoryFor, setOnnuri, type NewTx } from "@/ledger/tx-edit";
 import { adminClient, createGroupFixture, type GroupFixture } from "../helpers/db";
 
 const db = adminClient();
@@ -149,5 +149,53 @@ describe("검토 반영", () => {
     expect(await editTx(g.owner.client, card, { categoryId: null, amount: "1" }, now)).toEqual(bad); // 한 번에 한 항목
     expect(await setOnnuri(g.owner.client, card, "false" as never)).toEqual(bad);
     expect(await createManualTx(g.owner.client, g.groupId, null as never, now)).toEqual(bad);
+  });
+});
+
+describe("붙여넣기 저장: 겹침 확인과 가맹점 규칙", () => {
+  const input = (g: GroupFixture, extra: Partial<NewTx> = {}): NewTx => ({
+    amount: "12300", merchant: "테스트커피", occurredAt: "2026-09-23T08:28", userId: g.owner.userId, categoryId: null, ...extra,
+  });
+  const later = new Date("2026-09-23T09:00:00+09:00");
+
+  it("같은 사람·금액·5분 안의 카드 결제가 있으면 저장하지 않고 그 거래를 알려 준다", async () => {
+    const g = await createGroupFixture("paste-overlap");
+    await cardTx(g); // 09/23 08:26 12,300원
+    const r = await createManualTx(g.owner.client, g.groupId, input(g, { checkOverlap: true }), later);
+    expect(r).toEqual({
+      ok: false, error: "이미 들어온 결제 같아요",
+      overlap: { merchant: "테스트커피 강남역점(메가", amount: 12300, occurredAt: new Date("2026-09-23T08:26:00+09:00").toISOString() },
+    });
+    expect((await db.from("transactions").select("id").eq("group_id", g.groupId).eq("kind", "manual")).data).toHaveLength(0);
+  });
+
+  it("그래도 저장(확인 없이)은 저장된다. 확인을 켜지 않은 직접 적기도 그대로", async () => {
+    const g = await createGroupFixture("paste-force");
+    await cardTx(g);
+    expect((await createManualTx(g.owner.client, g.groupId, input(g), later)).ok).toBe(true);
+  });
+
+  it("같은 문자를 두 번 붙여 넣으면 두 번째는 겹친다(직접 추가끼리)", async () => {
+    const g = await createGroupFixture("paste-twice");
+    expect((await createManualTx(g.owner.client, g.groupId, input(g, { checkOverlap: true }), later)).ok).toBe(true);
+    const second = await createManualTx(g.owner.client, g.groupId, input(g, { checkOverlap: true }), later);
+    expect(second.ok).toBe(false);
+  });
+
+  it("다른 사람의 같은 금액 결제는 겹치지 않는다", async () => {
+    const g = await createGroupFixture("paste-other");
+    await cardTx(g);
+    const r = await createManualTx(g.owner.client, g.groupId, input(g, { userId: g.member.userId, checkOverlap: true }), later);
+    expect(r.ok).toBe(true);
+  });
+
+  it("가맹점 규칙: 우리 가계부에 같은 가게 규칙이 있으면 그 분류, 없으면 null(다른 가계부 규칙은 안 보임)", async () => {
+    const g = await createGroupFixture("paste-rule");
+    const other = await createGroupFixture("paste-rule-other");
+    const cafe = (await db.from("categories").select("id").eq("name", "카페").is("group_id", null).single()).data!.id;
+    await db.from("merchant_rules").insert({ group_id: g.groupId, merchant_pattern: "테스트커피", category_id: cafe });
+    expect(await ruleCategoryFor(g.owner.client, " 테스트커피 ")).toBe(cafe);
+    expect(await ruleCategoryFor(g.owner.client, "모르는가게")).toBeNull();
+    expect(await ruleCategoryFor(other.owner.client, "테스트커피")).toBeNull();
   });
 });

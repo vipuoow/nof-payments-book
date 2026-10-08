@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isUuid, parseAmount, parseMerchant, parseOccurredAt, parseTxForm } from "./forms";
+import { findOverlap, OVERLAP_MINUTES } from "./overlap";
 
 /**
  * 거래 상세·새로 추가·밀어서 삭제·확인할 문자의 저장 규칙. 화면을 거치지 않은 호출도 여기서 막는다.
@@ -11,6 +12,9 @@ export const FAIL = "저장하지 못했습니다. 다시 시도해 주세요.";
 export const CARD_ONLY = "카드 문자로 들어온 거래는 분류만 고칠 수 있어요.";
 export const CARD_NO_DELETE = "카드 문자로 들어온 거래는 지울 수 없어요.";
 export const RAW_DONE = "이미 처리된 문자입니다.";
+export const OVERLAP = "이미 들어온 결제 같아요";
+/** 붙여넣기 저장 때 이미 있는 것 같은 거래(occurredAt은 ISO) */
+export type Overlap = { merchant: string; amount: number; occurredAt: string };
 
 /** 한 번에 한 항목. 값은 화면 입력 그대로(금액 "13,325", 언제 "YYYY-MM-DDTHH:mm") */
 export type TxPatch = { amount?: string; merchant?: string; occurredAt?: string; userId?: string; categoryId?: string | null };
@@ -86,12 +90,16 @@ export async function deleteManualTx(db: SupabaseClient, txId: string): Promise<
   return { ok: true };
 }
 
-export type NewTx = { amount: string; merchant: string; occurredAt: string; userId: string; categoryId: string | null; rawId?: string | null };
+export type NewTx = {
+  amount: string; merchant: string; occurredAt: string; userId: string; categoryId: string | null; rawId?: string | null;
+  /** 붙여넣기로 온 결제: 같은 사람·금액·앞뒤 5분의 거래가 있으면 저장하지 않고 알려 준다 */
+  checkOverlap?: boolean;
+};
 
 /** 새로 추가. 확인할 문자에서 왔으면(rawId) 저장 뒤 그 문자를 처리됨(parsed)으로 바꾼다 */
 export async function createManualTx(
   db: SupabaseClient, groupId: string, input: NewTx, now: Date = new Date(),
-): Promise<{ ok: true; id: string; occurredAt: Date } | { ok: false; error: string }> {
+): Promise<{ ok: true; id: string; occurredAt: Date } | { ok: false; error: string; overlap?: Overlap }> {
   if (typeof input !== "object" || input === null) return { ok: false, error: FAIL };
   const parsed = parseTxForm((name) => {
     const v = (input as Record<string, unknown>)[name];
@@ -100,6 +108,20 @@ export async function createManualTx(
   if (!parsed.ok) return parsed;
   const v = parsed.value;
   if (v.categoryId !== null && !isUuid(v.categoryId)) return { ok: false, error: FAIL };
+  if (input.checkOverlap === true) {
+    const span = OVERLAP_MINUTES * 60_000;
+    const { data: near, error: nearError } = await db.from("transactions")
+      .select("user_id, kind, amount, merchant, occurred_at")
+      .eq("group_id", groupId).eq("user_id", v.userId).eq("amount", v.amount)
+      .gte("occurred_at", new Date(v.occurredAt.getTime() - span).toISOString())
+      .lte("occurred_at", new Date(v.occurredAt.getTime() + span).toISOString());
+    if (nearError) return { ok: false, error: FAIL };
+    const hit = findOverlap(
+      near.map((r) => ({ userId: r.user_id, kind: r.kind, amount: Number(r.amount), merchant: r.merchant, occurredAt: new Date(r.occurred_at) })),
+      { userId: v.userId, amount: v.amount, occurredAt: v.occurredAt },
+    );
+    if (hit) return { ok: false, error: OVERLAP, overlap: { merchant: hit.merchant, amount: hit.amount, occurredAt: hit.occurredAt.toISOString() } };
+  }
   const rawId = isUuid(input.rawId) ? input.rawId : null;
   // 문자를 먼저 차지한다(둘이 동시에 등록해도 한 사람만 성공). 거래 저장에 실패하면 되돌린다
   if (rawId) {
@@ -129,4 +151,12 @@ export async function ignoreRaw(db: SupabaseClient, rawId: string): Promise<Edit
   if (error) return { ok: false, error: FAIL };
   if (data.length === 0) return { ok: false, error: RAW_DONE };
   return { ok: true };
+}
+
+/** 가맹점 규칙(우리 가계부, 이름이 같을 때)의 분류. RLS로 다른 가계부 규칙은 보이지 않는다. */
+export async function ruleCategoryFor(db: SupabaseClient, merchant: string): Promise<string | null> {
+  const name = typeof merchant === "string" ? merchant.trim() : "";
+  if (!name) return null;
+  const { data } = await db.from("merchant_rules").select("category_id").eq("merchant_pattern", name).maybeSingle();
+  return data?.category_id ?? null;
 }
