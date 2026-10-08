@@ -3,29 +3,10 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { createPartnerInviteAction, type InviteState } from "@/app/group/actions";
+import { deliver, type Sent } from "@/lib/share";
 
 type Pending = { name: string; until: string; expired: boolean } | null;
-type Sent = "shared" | "copied" | "manual" | "retry";
 type Made = (Exclude<InviteState, null | { error: string }> & { sent: Sent }) | { error: string } | null;
-
-/** 공유 창 → (없으면) 클립보드 → (막히면) 직접 복사 안내. fromClick이 아니면 막힌 공유 창은 버튼으로 다시 시도하게 한다. */
-async function deliver(text: string, fromClick: boolean): Promise<Sent> {
-  if (typeof navigator.share === "function") {
-    try {
-      await navigator.share({ text });
-      return "shared";
-    } catch (e) {
-      // 사용자가 닫았거나(AbortError), 버튼을 누른 직후가 아니라 막힌 경우
-      if (!fromClick || (e as Error).name === "AbortError") return "retry";
-    }
-  }
-  try {
-    await navigator.clipboard.writeText(text);
-    return "copied";
-  } catch {
-    return "manual";
-  }
-}
 
 /**
  * 파트너 초대. 링크를 만들면 곧바로 휴대폰 공유 창(카카오톡·문자)을 띄운다.

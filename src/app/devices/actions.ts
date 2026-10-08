@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { issueIngestToken, revokeIngestToken } from "@/auth/groups";
 import { errorMessage } from "@/auth/messages";
-import type { SecretState } from "@/components/one-time-secret-form";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+
+/** 한 번만 보여 줄 비밀값(연결 코드) 또는 오류 */
+export type SecretState = { value?: string; error?: string } | null;
 
 export async function issueTokenAction(_prev: SecretState, formData: FormData): Promise<SecretState> {
   const supabase = await createSupabaseServerClient();
