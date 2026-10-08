@@ -59,3 +59,16 @@ describe("parseTxForm 미래 날짜", () => {
     expect(parseTxForm(form({ occurredAt: "2027-10-02T08:26" }), now)).toEqual({ ok: false, error: "일시를 확인해 주세요." });
   });
 });
+
+describe("항목별 검사(상세에서 한 항목씩 고칠 때)", () => {
+  it("금액·가게·언제를 따로 검사한다", async () => {
+    const { parseAmount, parseMerchant, parseOccurredAt } = await import("./forms");
+    expect(parseAmount("1만 3325")).toEqual({ ok: false, error: "금액은 1원 이상 숫자로 입력해 주세요." });
+    expect(parseAmount("13,325원")).toEqual({ ok: true, value: 13325 });
+    expect(parseMerchant("  ")).toEqual({ ok: false, error: "가맹점을 입력해 주세요." });
+    expect(parseMerchant(" 시장 ")).toEqual({ ok: true, value: "시장" });
+    const now = new Date("2026-10-08T05:00:00Z");
+    expect(parseOccurredAt("2026-10-08T09:00", now)).toEqual({ ok: true, value: new Date("2026-10-08T00:00:00Z") });
+    expect(parseOccurredAt("2026-11-01T09:00", now)).toEqual({ ok: false, error: "일시를 확인해 주세요." });
+  });
+});
