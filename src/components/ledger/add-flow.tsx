@@ -4,11 +4,15 @@ import { CheckButton, OFFLINE, type CheckButtonHandle } from "./check-button";
 import { CloseX } from "@/components/icons";
 import { useLayoutEffect, useRef, useState } from "react";
 import { createTx } from "@/app/tx-actions";
-import { kstLocalValue } from "@/ledger/month";
+import { kstLocalValue, kstTime } from "@/ledger/month";
+import { formatWon } from "@/ledger/summary";
+import type { Overlap } from "@/ledger/tx-edit";
 import { splitLocal } from "@/ledger/when";
 import type { LedgerChoices, RawView } from "./home-types";
+import { AddChoice } from "./add-choice";
 import { flyFrom } from "./motion";
-import { checkField, displayField, LABEL, Question, STEPS, type Choices, type Draft, type FieldKey } from "./questions";
+import { PasteStep, type PasteFill } from "./paste-step";
+import { checkField, displayField, LABEL, Question, STEPS, whenDay, type Choices, type Draft, type FieldKey } from "./questions";
 
 function initial(meId: string, now: Date, raw: RawView | null): { draft: Draft; done: FieldKey[] } {
   const at = splitLocal(raw?.guess.occurredAt ?? kstLocalValue(now));
@@ -22,8 +26,20 @@ function initial(meId: string, now: Date, raw: RawView | null): { draft: Draft; 
   return { draft, done };
 }
 
+/** 붙여 넣은 문자에서 찾은 값: 누가 = 나, 분류는 규칙이 있을 때만. 찾은 항목은 쌓아 두고 빠진 것만 묻는다 */
+function fromPaste(meId: string, now: Date, f: PasteFill): { draft: Draft; done: FieldKey[] } {
+  const at = splitLocal(kstLocalValue(f.occurredAt ?? now));
+  const draft: Draft = { amount: String(f.amount), merchant: f.merchant ?? "", categoryId: f.categoryId, date: at.date, time: at.time, userId: meId };
+  const done: FieldKey[] = ["amount", "who"];
+  if (f.merchant) done.push("merchant");
+  if (f.categoryId !== undefined) done.push("category");
+  if (f.occurredAt) done.push("when");
+  return { draft, done };
+}
+
 /**
- * 새로 추가: 질문은 화면 가운데에 하나씩(금액 → 어디서 → 분류 → 언제 → 누가).
+ * 새로 추가: 맨 앞에서 카드 문자 붙여넣기 / 직접 적기를 고른다(확인할 문자에서 왔으면 바로 입력).
+ * 질문은 화면 가운데에 하나씩(금액 → 어디서 → 분류 → 언제 → 누가).
  * 답하면 그 값이 위로 올라가 쌓이고, 쌓인 값을 누르면 다시 고친다. 다 쌓이면 [저장하기].
  */
 export function AddFlow({
@@ -41,6 +57,9 @@ export function AddFlow({
   const [error, setError] = useState<string | null>(null);
   // 저장한 뒤 새 줄로 들어가기 전까지 다시 누를 수 없다(두 번 저장 방지)
   const [saved, setSaved] = useState(false);
+  const [mode, setMode] = useState<"choose" | "paste" | "form">(raw ? "form" : "choose");
+  const [pasted, setPasted] = useState(false);
+  const [overlap, setOverlap] = useState<Overlap | null>(null);
   const fly = useRef<{ k: FieldKey; from: DOMRect | null } | null>(null);
   const firstStack = useRef(true);
   const center = useRef<HTMLDivElement>(null);
@@ -68,7 +87,7 @@ export function AddFlow({
       void el.offsetWidth;
       el.classList.add("lx-pop");
     }
-  }, [done, redo]);
+  }, [done, redo, mode]);
 
   /** 지금 질문의 답 검사: 통과해야 버튼이 체크된다 */
   function checkCurrent() {
@@ -95,13 +114,25 @@ export function AddFlow({
     setError(checkField(missing, draft));
     return false;
   }
-  async function save() {
+  function startPaste(f: PasteFill) {
+    const p = fromPaste(meId, now, f);
+    firstStack.current = true; // 찾은 값이 차례로 떠오른다
+    setDraft(p.draft);
+    setDone(p.done);
+    setPasted(true);
+    setMode("form");
+  }
+  /** force: 겹침 경고 뒤 [그래도 저장] */
+  async function save(force = false) {
     const r = await createTx({
       amount: draft.amount, merchant: draft.merchant.trim(), occurredAt: `${draft.date}T${draft.time}`,
-      userId: draft.userId, categoryId: draft.categoryId ?? null, rawId,
+      userId: draft.userId, categoryId: draft.categoryId ?? null, rawId, checkOverlap: pasted && !force,
     }).catch(() => ({ ok: false as const, error: OFFLINE }));
     if (!r.ok) {
-      setError(r.error);
+      if ("overlap" in r && r.overlap) {
+        setOverlap(r.overlap);
+        setError(null);
+      } else setError(r.error);
       return false;
     }
     setSaved(true);
@@ -109,19 +140,39 @@ export function AddFlow({
     return true;
   }
 
-  return (
-    <>
-      <div className="lx-bar lx-fade">
-        <button type="button" onClick={onClose} aria-label="닫기" className="close-icon"><CloseX /></button>
+  if (mode === "paste") {
+    return <PasteStep now={now} onBack={() => setMode("choose")} onRead={startPaste} onDirect={() => setMode("form")} />;
+  }
+  const closeBar = (
+    <div className="lx-bar lx-fade">
+      <button type="button" onClick={onClose} aria-label="닫기" className="close-icon"><CloseX /></button>
+      {mode === "form" && (
         <span className="lx-dots" aria-hidden>
           {STEPS.map((s) => <i key={s} className={s === current && !redo ? "lx-on" : done.includes(s) ? "lx-done" : ""} />)}
         </span>
-        <span className="w-14" />
-      </div>
-      {raw && <p className="lx-fade mx-[18px] mb-1 text-xs text-accent">문자에서 찾은 내용을 미리 채웠어요. 틀리면 눌러서 고쳐 주세요.</p>}
+      )}
+      <span className="w-14" />
+    </div>
+  );
+  if (mode === "choose") {
+    return (
+      <>
+        {closeBar}
+        <div className="flex min-h-0 flex-1 flex-col justify-center">
+          <AddChoice onPaste={() => setMode("paste")} onDirect={() => setMode("form")} />
+        </div>
+      </>
+    );
+  }
+  const seen = overlap ? new Date(overlap.occurredAt) : null;
+
+  return (
+    <>
+      {closeBar}
+      {(raw || pasted) && <p className="lx-fade mx-[18px] mb-1 text-xs text-accent">문자에서 찾은 내용을 미리 채웠어요. 틀리면 눌러서 고쳐 주세요.</p>}
       <div ref={stack} className="lx-fade flex flex-col gap-1.5 px-4 pt-1.5" aria-label="입력한 내용">
         {STEPS.filter((s) => done.includes(s)).map((s) => (
-          <button key={s} type="button" data-stack={s} className="lx-si" onClick={() => { setError(null); setRedo(s); }}>
+          <button key={s} type="button" data-stack={s} className="lx-si" onClick={() => { setError(null); setOverlap(null); setRedo(s); }}>
             <span>{LABEL[s]}</span><b>{displayField(s, draft, qChoices)}</b>
           </button>
         ))}
@@ -133,6 +184,13 @@ export function AddFlow({
           <div className="lx-q">
             <h2>다 입력했어요</h2>
             <p className="text-sm text-muted">맞으면 저장해 주세요. 위 항목을 누르면 고칠 수 있어요.</p>
+            {overlap && seen && (
+              <div role="alert" className="overlap-warn">
+                <b>이미 들어온 결제 같아요</b>
+                <span>{overlap.merchant} · {whenDay(splitLocal(kstLocalValue(seen)).date, now)} {kstTime(seen)} · {formatWon(overlap.amount)}원</span>
+                <button type="button" onClick={onClose} className="text-sm text-muted">닫기</button>
+              </div>
+            )}
             {error && <p role="alert" className="text-sm text-danger">{error}</p>}
           </div>
         )}
@@ -140,8 +198,10 @@ export function AddFlow({
       <div className="lx-cta">
         {current ? (
           <CheckButton key="step" ref={cta} label={redo ? "고쳤어요" : left === 0 ? "다 입력했어요" : "다음"} validate={checkCurrent} run={advance} />
+        ) : overlap ? (
+          <CheckButton key="force" label="그래도 저장" run={() => save(true)} keep />
         ) : (
-          <CheckButton key="save" label="저장하기" validate={checkAll} run={save} keep />
+          <CheckButton key="save" label="저장하기" validate={checkAll} run={() => save()} keep />
         )}
       </div>
     </>

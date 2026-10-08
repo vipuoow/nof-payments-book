@@ -10,7 +10,7 @@ test("화면 모드: 처음은 기본, 어둡게를 고르면 새로고침 뒤�
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "basic");
 
-  await page.getByLabel("메뉴").click();
+  await page.getByLabel("메뉴", { exact: true }).click();
   await page.getByRole("link", { name: "화면 모드" }).click();
   await expect(page.getByRole("radio", { name: /기본/ })).toHaveAttribute("aria-checked", "true");
   await page.getByRole("radio", { name: /어둡게/ }).click();

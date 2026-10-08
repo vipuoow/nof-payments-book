@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { adminClient } from "../tests/helpers/db";
-import { signIn, readyGroupFixture } from "./support";
+import { signIn, readyGroupFixture, startDirect } from "./support";
 
 const db = adminClient();
 
@@ -8,6 +8,7 @@ test("입력칸은 16px 이상이라 아이폰이 확대하지 않는다", async
   const g = await readyGroupFixture("e2e-zoom");
   await signIn(context, g.owner.email);
   await page.goto("/?add=1");
+  await startDirect(page);
   const add = page.getByRole("dialog", { name: "새로 추가" });
   const sizes: number[] = [];
   const read = async () => sizes.push(...await add.locator("input").evaluateAll((els) => els.map((e) => parseFloat(getComputedStyle(e).fontSize))));

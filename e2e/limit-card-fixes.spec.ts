@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { adminClient } from "../tests/helpers/db";
-import { readyGroupFixture, signIn } from "./support";
+import { readyGroupFixture, signIn, startDirect } from "./support";
 
 // 화면 모드·한도 카드 검토(f6d48ff..1d11607)에서 나온 지적 사항
 const db = adminClient();
@@ -70,6 +70,7 @@ test("Enter로 넘겨도 체크 버튼을 거치고, 저장 중에는 '완료'�
   await signIn(context, g.owner.email);
 
   await page.goto("/?add=1");
+  await startDirect(page);
   const add = page.getByRole("dialog", { name: "새로 추가" });
   await add.getByLabel("금액").pressSequentially("5000");
   await add.getByLabel("금액").press("Enter");
@@ -92,6 +93,7 @@ test("새로 추가 저장 중 연결이 끊기면 다시 해 달라고 알려 �
   const g = await readyGroupFixture("e2e-add-offline");
   await signIn(context, g.owner.email);
   await page.goto("/?add=1");
+  await startDirect(page);
   const add = page.getByRole("dialog", { name: "새로 추가" });
   await add.getByLabel("금액").pressSequentially("5000");
   await add.getByRole("button", { name: "다음" }).click();

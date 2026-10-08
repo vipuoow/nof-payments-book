@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { APPROVAL, UNKNOWN_KB } from "@/parsers/__fixtures__/kb-card";
 import { ingestMessage } from "@/ingest/service";
 import { adminClient, type GroupFixture } from "../tests/helpers/db";
-import { at, kstStamp, pickCategory, readyGroupFixture, signIn, openAdd } from "./support";
+import { at, kstStamp, pickCategory, readyGroupFixture, signIn, openAdd, startDirect } from "./support";
 
 const db = adminClient();
 const send = (g: GroupFixture, body: string, who: "owner" | "member" = "owner") =>
@@ -102,6 +102,7 @@ test("+로 새로 추가: 한 칸씩 묻고 답은 위에 쌓이며, 금액은 �
   await signIn(context, g.owner.email);
   await page.goto("/");
   await openAdd(page);
+  await startDirect(page);
   const add = page.getByRole("dialog", { name: "새로 추가" });
   const stacked = add.getByLabel("입력한 내용");
 

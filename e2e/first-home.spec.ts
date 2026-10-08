@@ -54,7 +54,7 @@ test("한도를 다음 달부터 바꾸면 이번 달 한도는 그대로", asyn
   await db.from("budgets").insert({ group_id: g.groupId, category_id: null, month: last, amount: 2_500_000 });
   await signIn(context, g.owner.email);
   await page.goto("/");
-  await page.getByLabel("메뉴").click();
+  await page.getByLabel("메뉴", { exact: true }).click();
   await page.getByRole("link", { name: "한도" }).click();
   await expect(page.getByText("지금 한도 2,500,000원")).toBeVisible();
   await page.getByLabel("새 한도", { exact: true }).fill("3,000,000");

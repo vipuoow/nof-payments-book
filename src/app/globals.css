@@ -256,3 +256,10 @@ main { transition: transform .45s cubic-bezier(.2,.8,.2,1), filter .45s; transfo
 @keyframes add-pill-in { from { opacity: 0; transform: translateX(14px) scaleX(.6); } to { opacity: 1; transform: none; } }
 @keyframes add-pill-out { to { opacity: 0; transform: translateX(14px) scaleX(.6); } }
 @media (prefers-reduced-motion: reduce) { .add-plus span { transition: none; } .add-pill, .add-pill.is-closing { animation: none; } }
+/* 새로 추가 분기 선택지·붙여넣기 칸·겹침 경고 */
+.add-choice { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 18px 20px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); transition: transform .15s; }
+.add-choice b { font-size: 16px; }
+.add-choice span { font-size: 13px; color: var(--muted); }
+.add-choice:active { transform: scale(.98); }
+.paste-box { width: 100%; resize: none; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); padding: 14px; font-size: 16px; line-height: 1.45; }
+.overlap-warn { display: flex; flex-direction: column; gap: 4px; align-items: center; margin-top: 10px; padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--warning) 14%, var(--surface)); font-size: 14px; }

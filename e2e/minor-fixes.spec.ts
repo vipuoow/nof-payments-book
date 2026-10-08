@@ -69,7 +69,7 @@ test("거래 상세는 모달로 포커스를 받고 배경 스크롤을 잠그�
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(await overflow()).not.toBe("hidden");
 
-  await page.getByLabel("메뉴").click();
+  await page.getByLabel("메뉴", { exact: true }).click();
   await expect(page.getByRole("link", { name: "카테고리" })).toBeVisible();
   await page.mouse.click(380, 200); // 펼친 메뉴(왼쪽)에 가려지지 않는 오른쪽 빈 곳
   await expect(page.getByRole("link", { name: "카테고리" })).toBeHidden();
