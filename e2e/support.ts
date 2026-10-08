@@ -70,7 +70,7 @@ export async function pickCategory(page: Page, name: string) {
 /** 홈 + → [결제 직접 입력]으로 새로 추가를 연다(분기 화면이 보인다) */
 export async function openAdd(page: Page) {
   await page.getByRole("button", { name: "결제 입력 메뉴" }).click();
-  await page.getByRole("link", { name: "결제 직접 입력" }).click();
+  await page.getByRole("button", { name: "결제 직접 입력" }).click();
 }
 
 /** 열린 새로 추가의 분기에서 [직접 적기] */

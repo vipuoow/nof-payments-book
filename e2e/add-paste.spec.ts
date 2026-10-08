@@ -11,41 +11,44 @@ const kbAt = (minutesAgo: number) => {
   return KB.replace("09/23 08:26", `${p(k.getUTCMonth() + 1)}/${p(k.getUTCDate())} ${p(k.getUTCHours())}:${p(k.getUTCMinutes())}`);
 };
 
-test("+를 누르면 '결제 직접 입력'이 펼쳐지고, 3초 뒤 + 하나만 남는다", async ({ page, context }) => {
+test("+를 누르면 같은 버튼이 늘어나 '결제 직접 입력'이 되고(×는 따로 없음), 3초 뒤 다시 +로 돌아온다", async ({ page, context }) => {
   const g = await readyGroupFixture("e2e-add-menu");
   await signIn(context, g.owner.email);
   await page.goto("/");
+  const menu = page.locator(".add-menu");
   const plus = page.getByRole("button", { name: "결제 입력 메뉴" });
-  const pill = page.getByRole("link", { name: "결제 직접 입력" });
-  await expect(pill).toHaveCount(0);
+  await expect(menu.getByRole("button")).toHaveCount(1);
   await plus.click();
-  await expect(plus).toHaveAttribute("aria-expanded", "true");
-  await expect(pill).toBeVisible();
+  const open = page.getByRole("button", { name: "결제 직접 입력" });
+  await expect(open).toHaveAttribute("aria-expanded", "true");
+  await expect(menu.getByRole("button")).toHaveCount(1); // 같은 버튼이 모양만 바뀐다
+  await expect(menu).not.toContainText("×");
   await page.waitForTimeout(3300);
-  await expect(pill).toHaveCount(0);
   await expect(plus).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("button", { name: "결제 직접 입력" })).toHaveCount(0);
 
-  // ×(펼친 + 버튼)를 다시 누르면 바로 접힌다
+  // 바깥을 누르면 바로 돌아온다
   await plus.click();
-  await expect(pill).toBeVisible();
-  await plus.click();
-  await expect(pill).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "결제 직접 입력" })).toBeVisible();
+  await page.locator(".spend-card").click({ position: { x: 20, y: 60 } });
+  await expect(plus).toHaveAttribute("aria-expanded", "false");
 });
 
-test("알약을 누르면 새로 추가가 열리고 메뉴는 접힌다. 닫은 뒤 +를 다시 누르면 다시 펼쳐진다", async ({ page, context }) => {
+test("펼친 버튼을 누르면 그 자리에서 새로 추가가 커지고, 닫은 뒤 +를 다시 누르면 다시 늘어난다", async ({ page, context }) => {
   const g = await readyGroupFixture("e2e-add-menu-open");
   await signIn(context, g.owner.email);
   await page.goto("/");
+  await expect(page.locator("[data-add-button]")).toHaveCount(1); // 새로 추가가 커지는 자리
   await page.getByRole("button", { name: "결제 입력 메뉴" }).click();
-  await page.getByRole("link", { name: "결제 직접 입력" }).click();
+  await page.getByRole("button", { name: "결제 직접 입력" }).click();
   const add = page.getByRole("dialog", { name: "새로 추가" });
   await expect(add).toBeVisible();
   await page.waitForTimeout(3300); // 남은 타이머가 있어도 문제없다
   await add.getByRole("button", { name: "닫기" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "결제 직접 입력" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "결제 입력 메뉴" })).toHaveAttribute("aria-expanded", "false");
   await page.getByRole("button", { name: "결제 입력 메뉴" }).click();
-  await expect(page.getByRole("link", { name: "결제 직접 입력" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "결제 직접 입력" })).toBeVisible();
 });
 
 test("문자 붙여넣기: 규칙 있는 가게면 마지막 화면까지 채워지고, 저장하면 목록에 나온다", async ({ page, context }) => {
@@ -163,15 +166,16 @@ test("검토 반영: [그래도 저장]을 저장 직후 한 번 더 눌러도 �
   expect((await db.from("transactions").select("id").eq("group_id", g.groupId).eq("merchant", "테스트커피 강남역점(메가")).data).toHaveLength(1);
 });
 
-test("검토 반영: 키보드로 알약에 머물러 있으면 3초가 지나도 접히지 않고, 벗어나면 접힌다", async ({ page, context }) => {
+test("검토 반영: 키보드로 펼치면 버튼에 머무는 동안 접히지 않고, 벗어나면 접힌다", async ({ page, context }) => {
   const g = await readyGroupFixture("e2e-add-menu-focus");
   await signIn(context, g.owner.email);
   await page.goto("/");
-  await page.getByRole("button", { name: "결제 입력 메뉴" }).click();
-  const pill = page.getByRole("link", { name: "결제 직접 입력" });
-  await pill.focus();
+  await page.getByRole("button", { name: "결제 입력 메뉴" }).focus();
+  await page.keyboard.press("Enter");
+  const open = page.getByRole("button", { name: "결제 직접 입력" });
+  await expect(open).toBeVisible();
   await page.waitForTimeout(3300);
-  await expect(pill).toBeVisible();
+  await expect(open).toBeVisible();
   await page.getByLabel("메뉴", { exact: true }).focus();
-  await expect(pill).toHaveCount(0);
+  await expect(open).toHaveCount(0);
 });

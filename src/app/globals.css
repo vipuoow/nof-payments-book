@@ -246,16 +246,31 @@ main { transition: transform .45s cubic-bezier(.2,.8,.2,1), filter .45s; transfo
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent), 0 0 30px 8px color-mix(in srgb, var(--accent) 18%, transparent); }
 @keyframes check-glow { 0% { transform: scale(.04); opacity: 0; } 18% { opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .check-btn.is-checking, .check-mark { animation: none; stroke-dashoffset: 0; } }
-/* 홈 + 펼침 메뉴: +가 45° 돌아 ×, 왼쪽으로 알약이 펼쳐진다(3초 뒤 접힘) */
-.add-menu { display: flex; align-items: center; gap: 6px; }
-.add-plus span { display: inline-block; transition: transform .25s cubic-bezier(.2,.8,.2,1); }
-.add-menu.is-open .add-plus span { transform: rotate(45deg); }
-.add-pill { white-space: nowrap; border-radius: 99px; background: var(--accent); color: #fff; font-size: 14px; font-weight: 600;
-  padding: 9px 16px; transform-origin: right center; animation: add-pill-in .25s cubic-bezier(.2,.8,.2,1); }
-.add-pill.is-closing { animation: add-pill-out .25s ease-in forwards; }
-@keyframes add-pill-in { from { opacity: 0; transform: translateX(14px) scaleX(.6); } to { opacity: 1; transform: none; } }
-@keyframes add-pill-out { to { opacity: 0; transform: translateX(14px) scaleX(.6); } }
-@media (prefers-reduced-motion: reduce) { .add-plus span { transition: none; } .add-pill, .add-pill.is-closing { animation: none; } }
+/* 홈 + : 같은 버튼이 왼쪽으로 부드럽게 늘어나 [결제 직접 입력]이 되고, 3초 뒤 다시 줄어 +로 돌아온다 */
+.add-menu { position: relative; display: flex; justify-content: flex-end; }
+.add-fab { position: relative; height: 40px; width: 40px; border-radius: 99px; overflow: hidden; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 0%, transparent);
+  transition: width .42s cubic-bezier(.22,1,.36,1), background-color .32s ease, color .32s ease, box-shadow .42s ease; }
+.add-fab-plus { position: absolute; right: 0; top: 0; width: 40px; height: 40px; display: grid; place-items: center; font-size: 27px; line-height: 1;
+  transition: opacity .2s ease, transform .42s cubic-bezier(.22,1,.36,1); }
+.add-fab-label { position: absolute; right: 18px; top: 0; height: 40px; display: flex; align-items: center; white-space: nowrap;
+  font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; opacity: 0; transform: translateX(10px);
+  transition: opacity .18s ease, transform .42s cubic-bezier(.22,1,.36,1); }
+.add-menu.is-open .add-fab { background: var(--accent); color: #fff; box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 30%, transparent); }
+.add-menu.is-open .add-fab-plus { opacity: 0; transform: rotate(90deg) scale(.6); }
+.add-menu.is-open .add-fab-label { opacity: 1; transform: none; transition: opacity .28s ease .12s, transform .42s cubic-bezier(.22,1,.36,1); }
+.add-fab:active { transform: scale(.97); }
+.add-fab-measure { position: absolute; visibility: hidden; pointer-events: none; right: auto; }
+@media (prefers-reduced-motion: reduce) { .add-fab, .add-fab-plus, .add-fab-label { transition: none !important; } }
+/* 새로 추가 안에서 화면 바꾸기(분기 → 붙여넣기 → 입력): 앞으로는 오른쪽에서, 뒤로는 왼쪽에서 */
+.lx-swap-fwd { animation: swap-fwd .38s cubic-bezier(.22,1,.36,1); }
+.lx-swap-back { animation: swap-back .38s cubic-bezier(.22,1,.36,1); }
+@keyframes swap-fwd { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes swap-back { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+/* 안내·경고는 툭 나타나지 않고 살짝 떠오른다 */
+.lx-msg { animation: msg-in .28s cubic-bezier(.22,1,.36,1); }
+@keyframes msg-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .lx-swap-fwd, .lx-swap-back, .lx-msg { animation: none; } }
 /* 새로 추가 분기 선택지·붙여넣기 칸·겹침 경고 */
 .add-choice { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 18px 20px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); transition: transform .15s; }
 .add-choice b { font-size: 16px; }

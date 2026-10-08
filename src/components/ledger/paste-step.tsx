@@ -56,7 +56,7 @@ export function PasteStep({ now, onBack, onRead, onDirect }: {
           placeholder="여기에 결제 문자를 붙여 넣어요" className="paste-box"
         />
         <button type="button" onClick={fromClipboard} className="mx-auto px-4 py-2 text-sm font-semibold text-accent">붙여넣기</button>
-        {error && <p role="alert" className="text-center text-sm text-danger">{error}</p>}
+        {error && <p key={error} role="alert" className="lx-msg text-center text-sm text-danger">{error}</p>}
         {noAmount && <button type="button" onClick={onDirect} className="mx-auto text-sm text-muted underline">직접 적기</button>}
       </div>
       <div className="lx-cta">

@@ -57,7 +57,13 @@ export function AddFlow({
   const [error, setError] = useState<string | null>(null);
   // 저장한 뒤 새 줄로 들어가기 전까지 다시 누를 수 없다(두 번 저장 방지)
   const [saved, setSaved] = useState(false);
-  const [mode, setMode] = useState<"choose" | "paste" | "form">(raw ? "form" : "choose");
+  const [mode, setModeNow] = useState<"choose" | "paste" | "form">(raw ? "form" : "choose");
+  // 화면을 바꿀 때 앞으로는 오른쪽에서, 뒤로는 왼쪽에서 밀려 들어온다(처음 화면은 그대로)
+  const [swap, setSwap] = useState<"" | "fwd" | "back">("");
+  const setMode = (m: "choose" | "paste" | "form") => {
+    setSwap(m === "choose" ? "back" : "fwd");
+    setModeNow(m);
+  };
   const [pasted, setPasted] = useState(false);
   const [overlap, setOverlap] = useState<Overlap | null>(null);
   const fly = useRef<{ k: FieldKey; from: DOMRect | null } | null>(null);
@@ -142,8 +148,13 @@ export function AddFlow({
     return true;
   }
 
+  const swapClass = swap ? `lx-swap lx-swap-${swap}` : "";
   if (mode === "paste") {
-    return <PasteStep now={now} onBack={() => setMode("choose")} onRead={startPaste} onDirect={() => setMode("form")} />;
+    return (
+      <div key="paste" className={`flex min-h-0 flex-1 flex-col ${swapClass}`}>
+        <PasteStep now={now} onBack={() => setMode("choose")} onRead={startPaste} onDirect={() => setMode("form")} />
+      </div>
+    );
   }
   const closeBar = (
     <div className="lx-bar lx-fade">
@@ -158,18 +169,18 @@ export function AddFlow({
   );
   if (mode === "choose") {
     return (
-      <>
+      <div key="choose" className={`flex min-h-0 flex-1 flex-col ${swapClass}`}>
         {closeBar}
         <div className="flex min-h-0 flex-1 flex-col justify-center">
           <AddChoice onPaste={() => setMode("paste")} onDirect={() => setMode("form")} />
         </div>
-      </>
+      </div>
     );
   }
   const seen = overlap ? new Date(overlap.occurredAt) : null;
 
   return (
-    <>
+    <div key="form" className={`flex min-h-0 flex-1 flex-col ${swapClass}`}>
       {closeBar}
       {(raw || pasted) && <p className="lx-fade mx-[18px] mb-1 text-xs text-accent">문자에서 찾은 내용을 미리 채웠어요. 틀리면 눌러서 고쳐 주세요.</p>}
       <div ref={stack} className="lx-fade flex flex-col gap-1.5 px-4 pt-1.5" aria-label="입력한 내용">
@@ -187,7 +198,7 @@ export function AddFlow({
             <h2>다 입력했어요</h2>
             <p className="text-sm text-muted">맞으면 저장해 주세요. 위 항목을 누르면 고칠 수 있어요.</p>
             {overlap && seen && (
-              <div role="alert" className="overlap-warn">
+              <div role="alert" className="overlap-warn lx-msg">
                 <b>이미 들어온 결제 같아요</b>
                 <span>{overlap.merchant} · {whenDay(splitLocal(kstLocalValue(seen)).date, now)} {kstTime(seen)} · {formatWon(overlap.amount)}원</span>
                 <button type="button" onClick={onClose} className="text-sm text-muted">닫기</button>
@@ -206,6 +217,6 @@ export function AddFlow({
           <CheckButton key="save" label="저장하기" validate={checkAll} run={() => save()} keep />
         )}
       </div>
-    </>
+    </div>
   );
 }
