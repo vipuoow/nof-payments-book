@@ -48,4 +48,14 @@ describe("readMoney", () => {
     expect(readMoney("인증번호 [123456]")).toBeNull();
     expect(readMoney("0.00(USD)")).toBeNull();
   });
+
+  it("가게 이름 속 ISO 단어(TOP·CUP)는 기호·코드를 이기지 못한다", () => {
+    expect(readMoney("KB국민카드1234 해외승인\n$8.00 10/02 09:08\n미국 TOP GOLF")).toEqual(fx("USD", 8));
+    expect(readMoney("해외승인\nUSD 8.00 10/02 09:08\nCUP NOODLE")).toEqual(fx("USD", 8));
+    expect(readMoney("해외승인\n10/02 09:08 15 CUP NOODLE\nUSD 8.00")).toEqual(fx("USD", 8));
+  });
+  it("시각·날짜의 숫자는 금액이 아니다", () => {
+    expect(readMoney("해외승인 10/02 09:08 TOP GOLF")).toBeNull();
+  });
 });
+

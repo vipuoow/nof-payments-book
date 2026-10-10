@@ -43,6 +43,17 @@ describe("해외 결제 저장", () => {
 });
 
 describe("카드 거래 금액 고치기", () => {
+  it("취소가 연결된 해외 결제 금액을 고치면 취소도 같이 맞춰진다(합계 0)", async () => {
+    const g = await createGroupFixture("fx7");
+    const a = await ingest(g, { p_kind: "approval", p_amount: 10739, p_occurred_at: "2026-10-02T00:08:00Z",
+      p_currency: "USD", p_foreign_amount: 8, p_fx_rate: 1342.34, p_amount_estimated: true });
+    const c = await ingest(g, { p_kind: "cancel", p_amount: 10800, p_occurred_at: "2026-10-03T01:00:00Z",
+      p_currency: "USD", p_foreign_amount: 8, p_fx_rate: 1350, p_amount_estimated: true });
+    const { error } = await g.owner.client.from("transactions").update({ amount: 10900 }).eq("id", a.transaction_id);
+    expect(error).toBeNull();
+    expect(await tx(c.transaction_id)).toMatchObject({ amount: -10900, amount_estimated: false });
+  });
+
   it("해외 결제는 금액만 고칠 수 있고, 고치면 예상 표시가 꺼진다", async () => {
     const g = await createGroupFixture("fx4");
     const a = await ingest(g, { p_kind: "approval", p_amount: 10739, p_occurred_at: "2026-10-02T00:08:00Z",
