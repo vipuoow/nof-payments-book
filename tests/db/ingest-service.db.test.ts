@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { APPROVAL, CANCEL, TRANSIT_NOTICE, UNKNOWN_KB } from "@/parsers/__fixtures__/kb-card";
+import { APPROVAL, CANCEL, FOREIGN_APPROVAL, TRANSIT_NOTICE, UNKNOWN_KB } from "@/parsers/__fixtures__/kb-card";
 import { APPROVAL as HD_APPROVAL, CANCEL as HD_CANCEL } from "@/parsers/__fixtures__/hyundai-card";
 import { resolveIngestToken } from "@/ingest/auth";
 import { ingestMessage, type IngestSource } from "@/ingest/service";
@@ -202,5 +202,24 @@ describe("ingestMessage", () => {
     await ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId }, { body: APPROVAL, receivedAt: received, source });
     const [tx] = await txOf(g.groupId);
     expect(tx.category_id).toBe(cafe!.id);
+  });
+});
+
+describe("해외 결제 수신", () => {
+  const recv = new Date("2026-10-05T12:00:00+09:00");
+  it("저장된 환율로 원화를 계산해 기록한다", async () => {
+    await db.from("fx_rates").upsert({ date: "2026-10-02", base: "KRW", rates: { KRW: 1, USD: 0.000745 } });
+    const g = await createGroupFixture("fxin");
+    const r = await ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId }, { body: FOREIGN_APPROVAL, receivedAt: recv, source });
+    expect(r.status).toBe("parsed");
+    const { data } = await db.from("transactions").select("amount, currency, foreign_amount, fx_rate, amount_estimated, merchant").eq("id", r.transactionId!).single();
+    expect(data).toMatchObject({ amount: 10738, currency: "USD", foreign_amount: 8, fx_rate: 1342.2819, amount_estimated: true, merchant: "typesafe a" });
+  });
+  it("환율이 없고 받기도 실패하면 확인할 문자", async () => {
+    await db.from("fx_rates").delete().gte("date", "1900-01-01");
+    const g = await createGroupFixture("fxno");
+    const fail = (async () => new Response("{}", { status: 500 })) as unknown as typeof fetch;
+    const r = await ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId }, { body: FOREIGN_APPROVAL, receivedAt: recv, source }, fail);
+    expect(r.status).toBe("unparsed");
   });
 });

@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sha256Hex } from "@/lib/hash";
-import { parseSms } from "@/parsers";
+import { toKrw } from "@/fx/rates";
+import { rateFor } from "@/fx/store";
+import { parseSms, type Payment } from "@/parsers";
 import { smsLines } from "@/parsers/lines";
 import type { TokenOwner } from "./auth";
 import { maskBody } from "./mask";
@@ -16,15 +18,28 @@ export function dedupeHash(body: string): string {
 
 /**
  * 문자를 분석하고, 원문 저장·중복 판정·취소 연결·거래 생성은 DB 함수(ingest_sms)에서
- * 한 트랜잭션으로 처리한다.
+ * 한 트랜잭션으로 처리한다. 외화 결제는 결제일 환율로 원화를 계산하고, 환율을 못 구하면 확인할 문자로 둔다.
  */
 export async function ingestMessage(
   db: SupabaseClient,
   owner: TokenOwner,
   input: { body: string; receivedAt: Date; source: IngestSource },
+  fetchFn: typeof fetch = fetch,
 ): Promise<IngestResult> {
   const { parserId, result } = parseSms(input.body, input.receivedAt);
-  const payment = (result.kind === "approval" || result.kind === "cancel") && result.amount !== null ? result : null;
+  let payment: (Payment & { amount: number }) | null = null;
+  let fxRate: number | null = null;
+  if (result.kind === "approval" || result.kind === "cancel") {
+    if (result.amount !== null) {
+      payment = { ...result, amount: result.amount };
+    } else if (result.foreign) {
+      const rate = await rateFor(db, result.foreign.currency, result.occurredAt, fetchFn);
+      if (rate) {
+        payment = { ...result, amount: toKrw(result.foreign.foreignAmount, rate.krwPer) };
+        fxRate = rate.krwPer;
+      }
+    }
+  }
   const status = payment ? "parsed" : result.kind === "ignore" ? "ignored" : "unparsed";
 
   const { data, error } = await db.rpc("ingest_sms", {
@@ -41,6 +56,10 @@ export async function ingestMessage(
     p_merchant: payment?.merchant ?? null,
     p_occurred_at: payment?.occurredAt.toISOString() ?? null,
     p_issuer: payment?.issuer ?? null,
+    p_currency: payment?.foreign?.currency ?? null,
+    p_foreign_amount: payment?.foreign?.foreignAmount ?? null,
+    p_fx_rate: fxRate,
+    p_amount_estimated: fxRate !== null,
   });
   if (error) throw error;
 
