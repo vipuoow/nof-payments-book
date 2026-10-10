@@ -25,7 +25,8 @@ export type RawView = {
   body: string;
   userId: string;
   receivedAt: string;
-  guess: { amount?: number; merchant?: string; occurredAt?: string };
+  /** fxNote: 외화를 결제일 환율로 원화로 바꿨으면 계산 근거 */
+  guess: { amount?: number; merchant?: string; occurredAt?: string; fxNote?: string };
 };
 
 export type LedgerChoices = {

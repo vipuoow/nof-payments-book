@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { findRuleCategory } from "@/app/tx-actions";
+import { convertForeign, findRuleCategory } from "@/app/tx-actions";
 import { PASTE_ERROR, readPastedSms } from "@/ledger/paste-sms";
 import { ChevronLeft } from "@/components/icons";
 import { CheckButton } from "./check-button";
 
 /** 붙여 넣은 문자에서 찾은 값. 분류는 가맹점 규칙이 있을 때만(없으면 undefined → 분류를 묻는다) */
-export type PasteFill = { amount: number; merchant?: string; occurredAt?: Date; categoryId: string | undefined };
+/** note: 외화를 원화로 바꿨으면 계산 근거 */
+export type PasteFill = { amount: number; merchant?: string; occurredAt?: Date; categoryId: string | undefined; note?: string };
+
+const NO_RATE = "환율을 아직 받지 못했어요. 금액을 직접 적어 주세요.";
 
 /** 결제문자 붙여넣기: 글을 읽어 채울 값을 넘긴다(원문은 서버로 보내지 않는다) */
 export function PasteStep({ now, onBack, onRead, onDirect }: {
@@ -26,9 +29,22 @@ export function PasteStep({ now, onBack, onRead, onDirect }: {
   async function read() {
     const r = readPastedSms(text, now);
     if (!r.ok) return false;
+    let amount = r.amount;
+    let note: string | undefined;
+    if (amount === undefined && r.foreign) {
+      const c = await convertForeign(r.foreign.currency, r.foreign.foreignAmount, (r.occurredAt ?? now).toISOString()).catch(() => null);
+      if (!c) {
+        setError(NO_RATE);
+        setNoAmount(true);
+        return false;
+      }
+      amount = c.amount;
+      note = c.note;
+    }
+    if (amount === undefined) return false;
     // 규칙을 못 찾아도(연결 끊김 포함) 분류만 물으면 된다
     const rule = r.merchant ? await findRuleCategory(r.merchant).catch(() => null) : null;
-    onRead({ amount: r.amount, merchant: r.merchant, occurredAt: r.occurredAt, categoryId: rule ?? undefined });
+    onRead({ amount, merchant: r.merchant, occurredAt: r.occurredAt, categoryId: rule ?? undefined, note });
     return true;
   }
 

@@ -21,3 +21,16 @@ export function krwPerUnit(rates: Record<string, number>, currency: string): num
 }
 
 export const toKrw = (foreignAmount: number, krwPer: number) => Math.round(foreignAmount * krwPer);
+
+/** 외화 표기: 정수면 쉼표 정수(150,000 VND), 아니면 소수 둘째 자리(8.50 USD) */
+export function fxLabel(f: { currency: string; foreignAmount: number }): string {
+  const digits = Number.isInteger(f.foreignAmount) ? 0 : 2;
+  return `${f.foreignAmount.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${f.currency}`;
+}
+
+/** 미리 채운 원화의 계산 근거: "8 USD × 1,342.28원 (10월 2일 환율)로 계산했어요" */
+export function fxNote(f: { currency: string; foreignAmount: number }, krwPer: number, date: string): string {
+  const [, m, d] = date.split("-").map(Number);
+  const rate = krwPer.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+  return `${fxLabel(f)} × ${rate}원 (${m}월 ${d}일 환율)로 계산했어요`;
+}

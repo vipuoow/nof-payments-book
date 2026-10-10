@@ -3,6 +3,9 @@ import { FX_URL, kstDateKey, krwPerUnit, parseErApi } from "./rates";
 
 type Fetch = typeof fetch;
 
+/** 받으러 가지 않는 fetch: 환율 표에 쓸 수 없는 로그인 사용자 클라이언트로 rateFor를 부를 때 */
+export const NO_FETCH = (async () => new Response("{}", { status: 503 })) as unknown as Fetch;
+
 /** 오늘 환율을 받아 날짜별로 저장(같은 날은 덮어씀). 실패하면 저장하지 않고 false */
 export async function fetchAndStoreRates(db: SupabaseClient, fetchFn: Fetch = fetch): Promise<boolean> {
   try {

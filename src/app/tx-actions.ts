@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { fxNote, toKrw } from "@/fx/rates";
+import { NO_FETCH, rateFor } from "@/fx/store";
 import { kstMonthOf, monthParam } from "@/ledger/month";
 import {
   createManualTx, deleteManualTx, editTx, FAIL, ignoreRaw, ruleCategoryFor, setOnnuri,
@@ -54,4 +56,13 @@ export async function ignoreRawMessage(rawId: string): Promise<EditResult> {
   const r = await ignoreRaw(await createSupabaseServerClient(), rawId);
   if (r.ok) revalidatePath("/");
   return r;
+}
+
+/** 붙여넣기의 외화를 결제일 환율로 원화로. 환율이 없으면 null(사용자가 직접 적는다) */
+export async function convertForeign(currency: string, foreignAmount: number, occurredAtIso: string): Promise<{ amount: number; note: string } | null> {
+  if (typeof currency !== "string" || !/^[A-Z]{3}$/.test(currency) || typeof foreignAmount !== "number" || !(foreignAmount > 0)) return null;
+  const at = new Date(occurredAtIso);
+  if (Number.isNaN(at.getTime())) return null;
+  const rate = await rateFor(await createSupabaseServerClient(), currency, at, NO_FETCH);
+  return rate ? { amount: toKrw(foreignAmount, rate.krwPer), note: fxNote({ currency, foreignAmount }, rate.krwPer, rate.date) } : null;
 }

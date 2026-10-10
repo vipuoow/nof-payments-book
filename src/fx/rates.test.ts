@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { kstDateKey, krwPerUnit, parseErApi, toKrw } from "./rates";
+import { fxLabel, fxNote, kstDateKey, krwPerUnit, parseErApi, toKrw } from "./rates";
 
 const SAMPLE = { result: "success", base_code: "KRW", time_last_update_unix: 1759968001, rates: { KRW: 1, USD: 0.000745, JPY: 0.1102 } };
 
@@ -20,5 +20,14 @@ describe("환율", () => {
   });
   it("KST 날짜", () => {
     expect(kstDateKey(new Date("2026-10-09T15:30:00Z"))).toBe("2026-10-10");
+  });
+
+  it("외화 표기: 정수면 정수, 아니면 소수 둘째 자리", () => {
+    expect(fxLabel({ currency: "USD", foreignAmount: 8.5 })).toBe("8.50 USD");
+    expect(fxLabel({ currency: "VND", foreignAmount: 150000 })).toBe("150,000 VND");
+    expect(fxLabel({ currency: "USD", foreignAmount: 8 })).toBe("8 USD");
+  });
+  it("계산 안내 문구", () => {
+    expect(fxNote({ currency: "USD", foreignAmount: 8 }, 1342.2819, "2026-10-02")).toBe("8 USD × 1,342.28원 (10월 2일 환율)로 계산했어요");
   });
 });

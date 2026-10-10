@@ -1,9 +1,10 @@
 import { inferYear, isValidKstDateTime, kstDate } from "@/parsers/kst";
 import { smsLines } from "@/parsers/lines";
+import { readMoney, type Foreign } from "@/parsers/money";
 
-export type SmsGuess = { amount?: number; merchant?: string; occurredAt?: Date };
+/** amount는 원화, 외화만 있으면 foreign(원화는 환율로 따로 계산) */
+export type SmsGuess = { amount?: number; foreign?: Foreign; merchant?: string; occurredAt?: Date };
 
-const AMOUNT = /([0-9][0-9,]*)\s*원/;
 const DATETIME = /(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})\s*(.*)$/;
 
 /**
@@ -14,15 +15,9 @@ const DATETIME = /(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})\s*(.*)$/;
 export function guessFromSms(body: string, receivedAt: Date): SmsGuess {
   const lines = smsLines(body);
   const guess: SmsGuess = {};
-  for (const line of lines) {
-    if (line.includes("누적")) continue;
-    const m = AMOUNT.exec(line);
-    const amount = m ? Number(m[1].replaceAll(",", "")) : 0;
-    if (amount >= 1 && Number.isSafeInteger(amount)) {
-      guess.amount = amount;
-      break;
-    }
-  }
+  const money = readMoney(lines.join("\n"));
+  if (money?.kind === "krw") guess.amount = money.amount;
+  if (money?.kind === "foreign") guess.foreign = { currency: money.currency, foreignAmount: money.foreignAmount };
   for (let i = 0; i < lines.length; i++) {
     const m = DATETIME.exec(lines[i]);
     if (!m) continue;
@@ -31,7 +26,7 @@ export function guessFromSms(body: string, receivedAt: Date): SmsGuess {
     if (!isValidKstDateTime(year, month, day, hour, minute)) break;
     guess.occurredAt = kstDate(year, month, day, hour, minute);
     const next = lines[i + 1];
-    const merchant = m[5].trim() || (next && !next.includes("누적") && !AMOUNT.test(next) ? next : "");
+    const merchant = m[5].trim() || (next && !next.includes("누적") && !readMoney(next) ? next : "");
     if (merchant) guess.merchant = merchant.slice(0, 100);
     break;
   }

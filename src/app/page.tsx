@@ -11,6 +11,8 @@ import { issuerLabel, paidWithOf } from "@/ledger/issuer";
 import { compareMonth, kstLocalValue, kstMonthOf, monthLabel, monthParam, parseMonthParam, shiftMonth } from "@/ledger/month";
 import { loadMonth, loadUnparsed } from "@/ledger/queries";
 import { guessFromSms } from "@/ledger/sms-guess";
+import { fxNote, toKrw } from "@/fx/rates";
+import { NO_FETCH, rateFor } from "@/fx/store";
 import { groupByDay, totals } from "@/ledger/summary";
 import { ConnectPrompt } from "@/components/home/connect-prompt";
 import { EmptyCheer } from "@/components/home/empty-cheer";
@@ -54,13 +56,22 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       card: issuerLabel(t.issuer ?? null, t.kind, paidWithOf(t, byId)),
     })),
   }));
-  const raws: RawView[] = unparsed.map((r) => {
+  const raws: RawView[] = await Promise.all(unparsed.map(async (r) => {
     const g = guessFromSms(r.body, new Date(r.received_at));
+    let amount = g.amount;
+    let fxNoteText: string | undefined;
+    if (!amount && g.foreign) {
+      const rate = await rateFor(supabase, g.foreign.currency, g.occurredAt ?? new Date(r.received_at), NO_FETCH);
+      if (rate) {
+        amount = toKrw(g.foreign.foreignAmount, rate.krwPer);
+        fxNoteText = fxNote(g.foreign, rate.krwPer, rate.date);
+      }
+    }
     return {
       id: r.id, body: r.body, userId: r.user_id, receivedAt: r.received_at,
-      guess: { amount: g.amount, merchant: g.merchant, occurredAt: g.occurredAt ? kstLocalValue(g.occurredAt) : undefined },
+      guess: { amount, merchant: g.merchant, occurredAt: g.occurredAt ? kstLocalValue(g.occurredAt) : undefined, fxNote: fxNoteText },
     };
-  });
+  }));
 
   return (
     <main className="mx-auto w-full max-w-[480px] px-4 pb-24">

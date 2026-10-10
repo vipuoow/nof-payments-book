@@ -32,4 +32,10 @@ describe("guessFromSms", () => {
   it("받은 달보다 뒤의 달이면 지난해로 본다", () => {
     expect(guessFromSms("1,000원\n12/31 23:00\n가게", received).occurredAt).toEqual(new Date("2025-12-31T14:00:00Z"));
   });
+
+  it("외화 문자는 금액 대신 외화를 돌려준다", () => {
+    const g = guessFromSms("[Web발신]\n신한카드 해외승인\n$12.00\n10/04 21:15\n테스트샵", received);
+    expect(g).toMatchObject({ foreign: { currency: "USD", foreignAmount: 12 }, merchant: "테스트샵" });
+    expect(g.amount).toBeUndefined();
+  });
 });

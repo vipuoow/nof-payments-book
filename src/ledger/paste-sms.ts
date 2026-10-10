@@ -1,8 +1,10 @@
 import { parseSms } from "@/parsers";
+import type { Foreign } from "@/parsers/money";
 import { guessFromSms } from "./sms-guess";
 
 export type PasteRead =
-  | { ok: true; amount: number; merchant?: string; occurredAt?: Date }
+  /** amount는 원화. 외화만 있으면 amount 없이 foreign(원화는 서버가 결제일 환율로 계산) */
+  | { ok: true; amount?: number; foreign?: Foreign; merchant?: string; occurredAt?: Date }
   | { ok: false; reason: "empty" | "no_amount" | "cancel" };
 
 export const PASTE_ERROR = {
@@ -20,15 +22,18 @@ export function readPastedSms(text: string, now: Date): PasteRead {
   if (!body) return { ok: false, reason: "empty" };
   const { result } = parseSms(body, now);
   if (result.kind === "cancel") return { ok: false, reason: "cancel" };
-  if (result.kind === "approval" && result.amount !== null) {
-    return { ok: true, amount: result.amount, merchant: result.merchant, occurredAt: result.occurredAt };
+  if (result.kind === "approval") {
+    return result.amount !== null
+      ? { ok: true, amount: result.amount, merchant: result.merchant, occurredAt: result.occurredAt }
+      : { ok: true, foreign: result.foreign, merchant: result.merchant, occurredAt: result.occurredAt };
   }
   // 분석기가 모르는 카드사도 취소 문자는 결제로 만들지 않는다
   if (body.includes("취소")) return { ok: false, reason: "cancel" };
   const g = guessFromSms(body, now);
-  if (!g.amount) return { ok: false, reason: "no_amount" };
+  if (!g.amount && !g.foreign) return { ok: false, reason: "no_amount" };
   return {
-    ok: true, amount: g.amount,
+    ok: true,
+    ...(g.amount ? { amount: g.amount } : { foreign: g.foreign }),
     ...(g.merchant ? { merchant: g.merchant } : {}),
     ...(g.occurredAt ? { occurredAt: g.occurredAt } : {}),
   };

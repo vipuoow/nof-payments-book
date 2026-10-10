@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { APPROVAL as KB, CANCEL as KB_CANCEL } from "@/parsers/__fixtures__/kb-card";
+import { APPROVAL as KB, CANCEL as KB_CANCEL, FOREIGN_APPROVAL } from "@/parsers/__fixtures__/kb-card";
 import { APPROVAL as HD } from "@/parsers/__fixtures__/hyundai-card";
 import { PASTE_ERROR, readPastedSms } from "./paste-sms";
 
@@ -38,5 +38,16 @@ describe("readPastedSms (붙여 넣은 결제 문자)", () => {
       no_amount: "결제 금액을 찾지 못했어요. 문자를 확인하거나 직접 적어 주세요.",
       cancel: "취소 문자예요. 원래 결제를 찾아 지워 주세요.",
     });
+  });
+
+  it("외화 문자는 외화로 읽는다(원화는 서버가 계산)", () => {
+    const r = readPastedSms(FOREIGN_APPROVAL, now);
+    expect(r).toMatchObject({ ok: true, foreign: { currency: "USD", foreignAmount: 8 }, merchant: "typesafe a" });
+    expect(r.ok && r.amount).toBeUndefined();
+  });
+
+  it("모르는 카드사 외화 문자도 외화로 읽는다", () => {
+    expect(readPastedSms("[Web발신]\n테스트카드 해외승인\n€9.50\n10/04 21:15\n테스트샵", now))
+      .toMatchObject({ ok: true, foreign: { currency: "EUR", foreignAmount: 9.5 } });
   });
 });

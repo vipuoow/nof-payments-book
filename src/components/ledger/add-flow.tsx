@@ -65,6 +65,7 @@ export function AddFlow({
     setModeNow(m);
   };
   const [pasted, setPasted] = useState(false);
+  const [fxNote, setFxNote] = useState<string | null>(raw?.guess.fxNote ?? null);
   const [overlap, setOverlap] = useState<Overlap | null>(null);
   const fly = useRef<{ k: FieldKey; from: DOMRect | null } | null>(null);
   const firstStack = useRef(true);
@@ -126,6 +127,7 @@ export function AddFlow({
     setDraft(p.draft);
     setDone(p.done);
     setPasted(true);
+    setFxNote(f.note ?? null);
     setMode("form");
   }
   /** force: 겹침 경고 뒤 [그래도 저장] */
@@ -183,6 +185,7 @@ export function AddFlow({
     <div key="form" className={`flex min-h-0 flex-1 flex-col ${swapClass}`}>
       {closeBar}
       {(raw || pasted) && <p className="lx-fade mx-[18px] mb-1 text-xs text-accent">문자에서 찾은 내용을 미리 채웠어요. 틀리면 눌러서 고쳐 주세요.</p>}
+      {fxNote && <p className="lx-fade mx-[18px] mb-1 text-xs text-muted">{fxNote}</p>}
       <div ref={stack} className="lx-fade flex flex-col gap-1.5 px-4 pt-1.5" aria-label="입력한 내용">
         {STEPS.filter((s) => done.includes(s)).map((s) => (
           <button key={s} type="button" data-stack={s} className="lx-si" onClick={() => { setError(null); setOverlap(null); setRedo(s); }}>
