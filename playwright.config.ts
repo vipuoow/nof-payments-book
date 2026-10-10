@@ -13,6 +13,7 @@ export default defineConfig({
     reuseExistingServer: true,
     timeout: 120_000,
     // 화면 테스트에서 실제 jev를 부르지 않는다
-    env: { TYPESAFE_API_KEY: "" },
+    // 화면 테스트에서 실제 환율 API를 부르지 않는다
+    env: { TYPESAFE_API_KEY: "", FX_SCHEDULE: "off" },
   },
 });
