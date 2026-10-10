@@ -67,6 +67,8 @@ main에 커밋 → git tag vX.Y.Z → git push origin vX.Y.Z
 
 2026-10-07 시험: v1.0.1~v1.0.3 모두 태그 후 약 3분 안에 자동 교체됨.
 
+**환율(v1.6.0~)**: 앱이 켜질 때 한 번, 그 뒤 매일 09:10 KST에 open.er-api.com에서 환율을 받아 `fx_rates`에 저장한다(따로 도는 컨테이너 없음, 앱 컨테이너가 바깥 HTTPS로 나갈 수 있어야 함). 실패하면 앱 기록에 `[fx] 환율 받기 실패`가 남고, 2일 넘게 못 받으면 운영자 화면에 "환율 갱신 실패"가 보인다. 확인: `sudo docker-compose -f compose.yaml logs --tail 100 app | grep fx` (아무것도 없으면 정상).
+
 ## 5. 되돌리기
 
 1. GitHub Actions의 image 작업을 **수동 실행**(workflow_dispatch)하고 `ref`에 되돌릴 태그(예: `v1.0.2`)를 넣는다.
