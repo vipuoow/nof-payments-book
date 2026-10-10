@@ -1,3 +1,4 @@
+import { looksForeign, readForeignCard } from "./foreign";
 import { inferYear, isValidKstDateTime, kstDate } from "./kst";
 import { smsLines as lines } from "./lines";
 import type { CardSmsParser, ParseResult } from "./types";
@@ -20,6 +21,11 @@ export const kbCardParser: CardSmsParser = {
 
     if (ls[0] === "KB국민카드" && ls[1]?.startsWith("후불교통")) {
       return { kind: "ignore", reason: "transit_billing_notice" };
+    }
+
+    if (looksForeign(ls)) {
+      const f = readForeignCard(ls, receivedAt);
+      return f ? { ...f, issuer: "kb" } : { kind: "unknown" };
     }
 
     const header = HEADER.exec(ls[0] ?? "");

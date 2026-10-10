@@ -1,3 +1,4 @@
+import { looksForeign, readForeignCard } from "./foreign";
 import { inferYear, isValidKstDateTime, kstDate } from "./kst";
 import { smsLines as lines } from "./lines";
 import type { CardSmsParser, ParseResult } from "./types";
@@ -19,6 +20,10 @@ export const hyundaiCardParser: CardSmsParser = {
 
   parse(body, receivedAt): ParseResult {
     const ls = lines(body);
+    if (looksForeign(ls)) {
+      const f = readForeignCard(ls, receivedAt);
+      return f ? { ...f, issuer: "hyundai" } : { kind: "unknown" };
+    }
     const header = HEADER.exec(ls[0] ?? "");
     const amount = AMOUNT.exec(ls[2] ?? "");
     const datetime = DATETIME.exec(ls[3] ?? "");

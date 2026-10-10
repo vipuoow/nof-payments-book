@@ -20,7 +20,7 @@ export function readPastedSms(text: string, now: Date): PasteRead {
   if (!body) return { ok: false, reason: "empty" };
   const { result } = parseSms(body, now);
   if (result.kind === "cancel") return { ok: false, reason: "cancel" };
-  if (result.kind === "approval") {
+  if (result.kind === "approval" && result.amount !== null) {
     return { ok: true, amount: result.amount, merchant: result.merchant, occurredAt: result.occurredAt };
   }
   // 분석기가 모르는 카드사도 취소 문자는 결제로 만들지 않는다

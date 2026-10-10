@@ -24,7 +24,7 @@ export async function ingestMessage(
   input: { body: string; receivedAt: Date; source: IngestSource },
 ): Promise<IngestResult> {
   const { parserId, result } = parseSms(input.body, input.receivedAt);
-  const payment = result.kind === "approval" || result.kind === "cancel" ? result : null;
+  const payment = (result.kind === "approval" || result.kind === "cancel") && result.amount !== null ? result : null;
   const status = payment ? "parsed" : result.kind === "ignore" ? "ignored" : "unparsed";
 
   const { data, error } = await db.rpc("ingest_sms", {

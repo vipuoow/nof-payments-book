@@ -38,3 +38,10 @@ export const UNKNOWN_HYUNDAI = `[Web발신]
 
 export const NOT_HYUNDAI = `[Web발신]
 현대테스트해상 보험료 50,000원 출금 예정`;
+
+export const FOREIGN_APPROVAL = `[Web발신]
+현대 ZERO 해외승인
+홍*동
+12.50(EUR)
+10/04 21:15
+테스트카페 파리점`;

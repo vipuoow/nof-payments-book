@@ -44,3 +44,18 @@ KB국민카드 10월 결제금액 안내
 
 export const NOT_KB = `[Web발신]
 [테스트은행] 입금 50,000원`;
+
+export const FOREIGN_APPROVAL = `[Web발신]
+KB국민카드1234 해외승인
+8.00(USD) 10/02 09:08
+미국 typesafe a`;
+
+export const FOREIGN_CANCEL = `[Web발신]
+KB국민카드1234 해외취소
+8.00(USD) 10/03 10:00
+미국 typesafe a`;
+
+export const FOREIGN_WITH_WON = `[Web발신]
+KB국민카드1234 해외승인
+10,739원 10/02 09:08
+미국 typesafe a`;
