@@ -20,6 +20,8 @@ export type LedgerTx = {
   issuer?: string | null;
   /** "onnuri"면 온누리상품권으로 낸 결제(카드 대금 미청구). 쓴 돈에는 그대로 넣는다 */
   paidWith?: string | null;
+  /** 해외 결제: 외화·적용 환율(1단위 원화)·예상 금액 여부. 원화 거래는 null */
+  fx?: { currency: string; foreignAmount: number; rate: number | null; estimated: boolean } | null;
 };
 
 export type Member = { userId: string; name: string };

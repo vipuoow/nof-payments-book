@@ -52,7 +52,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     total: g.items.reduce((s, t) => s + t.amount, 0),
     items: g.items.map((t) => ({
       id: t.id, userId: t.userId, kind: t.kind, amount: t.amount, merchant: t.merchant, occurredAt: t.occurredAt.toISOString(),
-      categoryId: t.categoryId, categorySource: t.categorySource, cancelled: data.cancelledIds.has(t.id), paidWith: t.paidWith ?? null,
+      categoryId: t.categoryId, categorySource: t.categorySource, cancelled: data.cancelledIds.has(t.id), paidWith: t.paidWith ?? null, fx: t.fx ?? null,
       card: issuerLabel(t.issuer ?? null, t.kind, paidWithOf(t, byId)),
     })),
   }));

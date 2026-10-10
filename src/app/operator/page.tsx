@@ -5,13 +5,15 @@ import { operatorOverview } from "@/auth/operator";
 import { GroupCard } from "@/components/operator/group-card";
 import { GrouplessRow } from "@/components/operator/groupless-row";
 import { InviteCard } from "@/components/operator/invite-card";
+import { fxStale } from "@/fx/rates";
+import { latestRateDate } from "@/fx/store";
 import { loadMe } from "@/lib/session";
 
 /** 운영자 서비스 화면: 현황, 서비스 초대, 그룹(없애기), 가계부 없는 계정(지우기) */
 export default async function OperatorPage() {
   const { supabase, me } = await loadMe();
   if (!me.isOperator) redirect("/");
-  const o = await operatorOverview(supabase);
+  const [o, fxDate] = await Promise.all([operatorOverview(supabase), latestRateDate(supabase)]);
 
   return (
     <main className="mx-auto flex w-full max-w-[480px] flex-col gap-4 px-4 pb-16">
@@ -24,6 +26,9 @@ export default async function OperatorPage() {
         <div><p className="text-xs text-muted">그룹</p><p className="tabular text-lg font-bold">{o.groups.length}</p></div>
         <div><p className="text-xs text-muted">가계부 없음</p><p className="tabular text-lg font-bold">{o.groupless.length}</p></div>
       </section>
+      {fxStale(fxDate, new Date()) && (
+        <p role="status" className="card text-sm text-danger">환율 갱신 실패(마지막 {fxDate ?? "없음"})</p>
+      )}
       <InviteCard />
       <section className="flex flex-col gap-2">
         <h2 className="px-1 font-semibold">그룹</h2>

@@ -19,12 +19,13 @@ export type MonthData = {
 };
 
 const TX_COLUMNS =
-  "id, user_id, kind, amount, merchant, occurred_at, category_id, category_source, cancels_transaction_id, memo, raw_message_id, issuer, paid_with";
+  "id, user_id, kind, amount, merchant, occurred_at, category_id, category_source, cancels_transaction_id, memo, raw_message_id, issuer, paid_with, currency, foreign_amount, fx_rate, amount_estimated";
 
 type TxRow = {
   id: string; user_id: string; kind: TxKind; amount: number; merchant: string; occurred_at: string;
   category_id: string | null; category_source: CategorySource; cancels_transaction_id: string | null;
   memo: string; raw_message_id: string | null; issuer: string | null; paid_with: string | null;
+  currency: string | null; foreign_amount: number | null; fx_rate: number | null; amount_estimated: boolean;
 };
 
 function toLedgerTx(r: TxRow): LedgerTx {
@@ -32,6 +33,9 @@ function toLedgerTx(r: TxRow): LedgerTx {
     id: r.id, userId: r.user_id, kind: r.kind, amount: Number(r.amount), merchant: r.merchant,
     occurredAt: new Date(r.occurred_at), categoryId: r.category_id, categorySource: r.category_source,
     cancelsTransactionId: r.cancels_transaction_id, memo: r.memo, rawMessageId: r.raw_message_id, issuer: r.issuer, paidWith: r.paid_with,
+    fx: r.currency
+      ? { currency: r.currency, foreignAmount: Number(r.foreign_amount), rate: r.fx_rate === null ? null : Number(r.fx_rate), estimated: r.amount_estimated }
+      : null,
   };
 }
 

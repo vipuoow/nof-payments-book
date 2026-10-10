@@ -1,5 +1,6 @@
 "use client";
 
+import { fxLabel } from "@/fx/rates";
 import { useEffect, useRef, useState } from "react";
 import { kstTime } from "@/ledger/month";
 import { formatWon } from "@/ledger/summary";
@@ -127,8 +128,8 @@ export function TxRows({
                       </span>
                     </span>
                     <span className="flex shrink-0 flex-col items-end">
-                      <span className={`tabular text-[15px] font-semibold ${t.cancelled ? "text-muted line-through" : ""}`}>{formatWon(t.amount)}원</span>
-                      <span data-testid="tx-card" className="text-xs text-muted">{t.card}</span>
+                      <span className={`tabular text-[15px] font-semibold ${t.cancelled ? "text-muted line-through" : ""}`}>{t.fx?.estimated ? "약 " : ""}{formatWon(t.amount)}원</span>
+                      <span data-testid="tx-card" className="text-xs text-muted">{t.fx ? `${t.card} · ${fxLabel(t.fx)}` : t.card}</span>
                     </span>
                   </a>
                 </li>

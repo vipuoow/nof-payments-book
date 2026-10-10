@@ -34,3 +34,10 @@ export function fxNote(f: { currency: string; foreignAmount: number }, krwPer: n
   const rate = krwPer.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
   return `${fxLabel(f)} × ${rate}원 (${m}월 ${d}일 환율)로 계산했어요`;
 }
+
+/** 운영자 알림: 마지막으로 저장한 환율 날짜가 오늘(KST)보다 2일 이상 전이거나 없으면 true */
+export function fxStale(latest: string | null, now: Date): boolean {
+  if (!latest) return true;
+  const days = (Date.parse(kstDateKey(now)) - Date.parse(latest)) / 86_400_000;
+  return days >= 2;
+}

@@ -62,8 +62,14 @@ export async function editTx(db: SupabaseClient, txId: string, patch: TxPatch, n
   }
   if (Object.keys(update).length === 0) return { ok: true };
 
-  const { data: current } = await db.from("transactions").select("kind").eq("id", txId).maybeSingle();
+  const { data: current } = await db.from("transactions").select("kind, currency").eq("id", txId).maybeSingle();
   if (!current) return { ok: false, error: FAIL };
+  // 해외 결제는 카드 문자 거래여도 금액만 실제 청구액으로 고칠 수 있다(DB가 예상 표시를 끈다)
+  if (current.kind === "approval" && current.currency && "amount" in update) {
+    const { data, error } = await db.from("transactions").update({ amount: update.amount }).eq("id", txId).select("id");
+    if (error || !data?.length) return { ok: false, error: FAIL };
+    return { ok: true };
+  }
   if (current.kind !== "manual") return { ok: false, error: CARD_ONLY };
   const { data, error } = await db.from("transactions").update(update).eq("id", txId).eq("kind", "manual").select("id");
   if (error || !data?.length) return { ok: false, error: FAIL };

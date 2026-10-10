@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { APPROVAL, UNKNOWN_KB } from "@/parsers/__fixtures__/kb-card";
+import { APPROVAL, FOREIGN_APPROVAL, UNKNOWN_KB } from "@/parsers/__fixtures__/kb-card";
 import { ingestMessage } from "@/ingest/service";
 import { createManualTx, deleteManualTx, editTx, ignoreRaw, ruleCategoryFor, setOnnuri, type NewTx } from "@/ledger/tx-edit";
 import { adminClient, createGroupFixture, type GroupFixture } from "../helpers/db";
@@ -197,5 +197,19 @@ describe("붙여넣기 저장: 겹침 확인과 가맹점 규칙", () => {
     expect(await ruleCategoryFor(g.owner.client, " 테스트커피 ")).toBe(cafe);
     expect(await ruleCategoryFor(g.owner.client, "모르는가게")).toBeNull();
     expect(await ruleCategoryFor(other.owner.client, "테스트커피")).toBeNull();
+  });
+});
+
+describe("해외 결제 금액 고치기", () => {
+  it("해외 결제는 금액을 고칠 수 있고 예상 표시가 꺼진다, 다른 항목은 여전히 거절", async () => {
+    const g = await createGroupFixture("txe-fx");
+    await db.from("fx_rates").upsert({ date: "2026-10-02", base: "KRW", rates: { KRW: 1, USD: 0.000745 } });
+    const r = await ingestMessage(db, { userId: g.owner.userId, groupId: g.groupId },
+      { body: FOREIGN_APPROVAL, receivedAt: new Date("2026-10-05T12:00:00+09:00"), source: "manual_test" });
+    const id = r.transactionId!;
+    expect(await editTx(g.owner.client, id, { amount: "11,000" }, now)).toEqual({ ok: true });
+    const { data } = await db.from("transactions").select("amount, amount_estimated").eq("id", id).single();
+    expect(data).toEqual({ amount: 11000, amount_estimated: false });
+    expect(await editTx(g.owner.client, id, { merchant: "x" }, now)).toEqual({ ok: false, error: "카드 문자로 들어온 거래는 분류만 고칠 수 있어요." });
   });
 });

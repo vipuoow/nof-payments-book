@@ -15,6 +15,8 @@ export type RowTx = {
   /** 취소가 연결된 결제 */
   cancelled: boolean;
   paidWith: string | null;
+  /** 해외 결제: 외화·적용 환율·예상 금액 여부 */
+  fx: { currency: string; foreignAmount: number; rate: number | null; estimated: boolean } | null;
 };
 
 export type DayView = { key: string; label: string; total: number; items: RowTx[] };

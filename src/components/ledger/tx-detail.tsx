@@ -6,11 +6,18 @@ import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { setOnnuriPaid, updateTxField } from "@/app/tx-actions";
 import { kstLocalValue } from "@/ledger/month";
+import { FX_SOURCE, fxLabel } from "@/fx/rates";
 import { formatWon } from "@/ledger/summary";
 import type { TxPatch } from "@/ledger/tx-edit";
 import { splitLocal } from "@/ledger/when";
 import type { LedgerChoices, RowTx } from "./home-types";
 import { checkField, LABEL, Question, whenDay, type Choices, type Draft, type FieldKey } from "./questions";
+
+/** 결제일(KST) "10월 2일" */
+const fxDay = (iso: string) => {
+  const [, m, d] = kstLocalValue(new Date(iso)).slice(0, 10).split("-").map(Number);
+  return `${m}월 ${d}일`;
+};
 
 const draftOf = (t: RowTx): Draft => {
   const { date, time } = splitLocal(kstLocalValue(new Date(t.occurredAt)));
@@ -43,12 +50,15 @@ export function TxDetail({
   // 누르면 바로 체크가 바뀌고, 저장에 실패하면 원래대로 돌아간다
   const [onnuri, setOnnuri] = useOptimistic(tx.paidWith === "onnuri");
 
-  const editable = (k: FieldKey) => tx.kind === "manual" || k === "category";
+  // 해외 결제는 카드 문자 거래여도 금액을 실제 청구액으로 고칠 수 있다
+  const foreignPay = tx.kind === "approval" && !!tx.fx;
+  const editable = (k: FieldKey) => tx.kind === "manual" || k === "category" || (k === "amount" && foreignPay);
+  const about = tx.fx?.estimated ? "약 " : "";
   const qChoices: Choices = { categories: choices.categories, members: choices.members, now };
   const category = tx.categoryId ? choices.categoryNames[tx.categoryId] : undefined;
   const view = draftOf(tx);
   const value: Record<FieldKey, string> = {
-    amount: `${formatWon(tx.amount)}원`,
+    amount: `${about}${formatWon(tx.amount)}원`,
     merchant: tx.merchant,
     category: category ?? "미지정",
     when: `${whenDay(view.date, now)} ${view.time}`,
@@ -120,7 +130,14 @@ export function TxDetail({
           {category ? category.slice(0, 1) : "?"}
         </span>
         <h2 className="text-[17px] font-semibold">{tx.merchant}</h2>
-        <p className="tabular text-[32px] font-extrabold tracking-tight">{formatWon(tx.amount)}원</p>
+        <p className="tabular text-[32px] font-extrabold tracking-tight">
+          {about}{formatWon(tx.amount)}원{tx.fx?.estimated && <span className="text-base font-semibold text-muted"> (예상)</span>}
+        </p>
+        {tx.fx && (
+          <p data-testid="detail-fx" className="tabular text-sm text-muted">
+            {fxLabel(tx.fx)}{tx.fx.rate !== null && ` × ${tx.fx.rate.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}원 (${fxDay(tx.occurredAt)} 환율)`}
+          </p>
+        )}
       </div>
       <div className="lx-fade mx-3.5 rounded-[20px] bg-surface py-1">
         {(Object.keys(LABEL) as FieldKey[]).map((k) => (
@@ -150,11 +167,12 @@ export function TxDetail({
         </label>
       )}
       {tx.kind !== "manual" ? (
-        <p className="lx-fade mt-3 px-5 text-center text-xs text-muted">카드 문자로 들어온 거래는 분류만 고칠 수 있어요.</p>
+        <p className="lx-fade mt-3 px-5 text-center text-xs text-muted">{foreignPay ? "해외 결제는 분류와 금액만 고칠 수 있어요." : "카드 문자로 들어온 거래는 분류만 고칠 수 있어요."}</p>
       ) : (
         // 밀어서 지우기를 못 쓰는 경우(키보드·화면 읽기)에도 지울 수 있게
         <button type="button" onClick={onAskDelete} className="lx-fade mx-auto mt-4 block px-4 py-2 text-sm text-danger">이 거래 지우기</button>
       )}
+      {tx.fx?.rate != null && <p className="lx-fade mt-4 text-center text-[11px] text-muted">{FX_SOURCE}</p>}
       </div>
 
       {step && (
